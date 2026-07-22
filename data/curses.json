@@ -1,0 +1,35 @@
+{
+  "wynncraftVersion": "2.2.1",
+  "source": "Ultimate Wynncraft Lootrun Guide — Misc. Info tab",
+  "verified": "2026-07-21",
+
+  "principle": "Curses never penalise the PLAYER directly — they only buff mobs (user, 2026-07-21). A curse is difficulty scaling, not a resource cost. But see the Radiance thresholds: at high stacks 'difficulty' becomes lethality, so the advisor must not treat curse accumulation as free either.",
+
+  "radiance": {
+    "addedIn": "2.2.0",
+    "types": [
+      { "id": "radiance_power", "name": "Radiance Power", "perStack": "+1 Power" },
+      { "id": "radiance_chance", "name": "Radiance Chance", "perStack": "+2.5% chance" }
+    ],
+    "minimumSpawnChance": "0% — Radiance does not occur at all without stacks",
+    "scaling": "Scales rapidly once stacked.",
+    "thresholds": [
+      { "power": 5, "effect": "Mobs explode on death" },
+      { "power": 8, "effect": "Potential one-shot attacks" },
+      { "power": 10, "effect": "Radiance spreads to nearby mobs" }
+    ],
+    "STRATEGY_IMPACT": "These are hard breakpoints, not smooth scaling. Radiance Power 8 is the danger line — one-shot attacks end runs regardless of build, and under Hubris a death ends the run outright. The advisor should warn on approaching 8 Power rather than scoring Radiance linearly.",
+    "consumers": ["radiant_hunter", "lights_out"],
+    "note": "Radiant Hunter cleanses Radiance CHANCE specifically. Lights Out feeds Radiance Chance curses then converts all Radiance curses to pulls."
+  },
+
+  "otherTypes": {
+    "status": "unconfirmed naming",
+    "knownEffects": [
+      "+30% Health",
+      "+25% Attack Damage",
+      "+5% Damage Resistance (caps at 70%)"
+    ],
+    "note": "Wiki lists these as curse effects but does not confirm whether they are individually named/tracked like Radiance. Engine models them collectively as `generic`."
+  }
+}

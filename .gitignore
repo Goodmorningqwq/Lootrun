@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+
+# next.js build output
+.next/
+out/
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# env / secrets
+.env
+.env*.local
+
+# editor / os
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# local claude settings (keep launch.json, it's useful to share)
+.claude/settings.local.json

@@ -1,0 +1,513 @@
+{
+  "wynncraftVersion": "2.2.1",
+  "source": "wynncraft.wiki.gg/wiki/Lootrunning, patched forward with the Version_2.2.0 and Version_2.2.1 changelogs",
+  "verified": "2026-07-21",
+  "poolSize": "28 known + 6 unknown = 34 total. The 28 are corroborated by two independent sources (2.2.1 wiki table and the user's guide), which agree on the SET of missions while disagreeing on several numbers — see `conflict` fields.",
+  "incomplete": "2.2.1 added SIX new missions whose names/effects are absent from the changelog, the wiki, AND the user's guide (which snapshots a pre-2.2.1 pool). The in-game Inspect > Missions tab is the only remaining source.",
+  "note": "`reads` = state variables this mission's effect depends on. The union of all `reads` defines the minimum state the tracker MUST maintain. `roles` drive goal predicates. `archetypes` drive conditional follow-up priority.",
+  "missions": [
+    {
+      "id": "cleansing_greed",
+      "name": "Cleansing Greed",
+      "effect": "Opening a Flying Chest removes 1 Curse.",
+      "roles": [
+        "curse_cleanser"
+      ],
+      "reads": [
+        "flyingChestsOpened",
+        "curses"
+      ],
+      "archetypes": [
+        "flying_chest"
+      ],
+      "notes": "Dead without a flying-chest source. Anti-synergy with curse-stacking archetypes that WANT curses."
+    },
+    {
+      "id": "materialism",
+      "name": "Materialism",
+      "effect": "All challenges additionally spawn 2 Flying Chests on completion.",
+      "roles": [
+        "chest_generator"
+      ],
+      "reads": [
+        "challengesCompleted"
+      ],
+      "archetypes": [
+        "flying_chest"
+      ],
+      "notes": "2.1.3 buff: no longer blocks Yellow Beacons, and always spawns 2. Enabler for every chest-consuming mission."
+    },
+    {
+      "id": "hoarder",
+      "name": "Hoarder",
+      "effect": "Every 6 Flying Chests opened, choose 1 Boon of 2 (at 200% potency) after next challenge.",
+      "roles": [
+        "boon_generator"
+      ],
+      "reads": [
+        "flyingChestsOpened"
+      ],
+      "archetypes": [
+        "flying_chest"
+      ],
+      "changedIn": "2.2.1 — required chests 7 -> 6, and the chosen Boon is now 200% potency.",
+      "notes": "Primary boon generator — lets you skip Blue Beacons. Requires a chest engine (Materialism/Yellow). The 2.2.1 buff (6 chests @ 200%) makes this materially stronger than any pre-June-2026 guide rates it."
+    },
+    {
+      "id": "jesters_trick",
+      "name": "Jester's Trick",
+      "effect": "Every 25 items offered from Flying Chests: random +3 Pulls / +1 Boon / +1-2 Curse / +60s.",
+      "roles": [
+        "boon_generator",
+        "pull_generator",
+        "time_source"
+      ],
+      "reads": [
+        "itemsOffered"
+      ],
+      "archetypes": [
+        "flying_chest"
+      ],
+      "notes": "Multi-role filler. Random, so counts as a WEAK generator — do not let it satisfy the runnable predicate alone.",
+      "strength": "weak"
+    },
+    {
+      "id": "interest_scheme",
+      "name": "Interest Scheme",
+      "effect": "Every 2 Pulls gained adds +1 Flying Chest to your next Yellow Beacon (max 12).",
+      "roles": [
+        "chest_generator"
+      ],
+      "reads": [
+        "pulls",
+        "beaconUses.yellow"
+      ],
+      "archetypes": [
+        "flying_chest"
+      ],
+      "notes": "Converts pulls into chests; pairs with Hoarder to close a pull -> chest -> boon loop."
+    },
+    {
+      "id": "orphions_grace",
+      "name": "Orphion's Grace",
+      "effect": "Boons are 50% more effective.",
+      "roles": [
+        "boon_amplifier"
+      ],
+      "reads": [
+        "boons"
+      ],
+      "archetypes": [
+        "flying_chest",
+        "curse_stack",
+        "reroll_spam"
+      ],
+      "notes": "Universal good. Multiplicative with everything boon-shaped."
+    },
+    {
+      "id": "opal_offering",
+      "name": "Opal Offering",
+      "effect": "On gaining a Curse, consume 1 Boon for +1 Pull, +2 more per 50% Potency above 100% consumed.",
+      "roles": [
+        "pull_generator"
+      ],
+      "reads": [
+        "curses",
+        "boons",
+        "boonPotency"
+      ],
+      "archetypes": [
+        "curse_stack"
+      ],
+      "notes": "REQUIRES per-boon potency tracking to advise correctly. Wants high-potency boons + high curse rate."
+    },
+    {
+      "id": "gourmand",
+      "name": "Gourmand",
+      "effect": "+2 Beacon Choices per Beacon Reroll used, capped at 6 total choices. Resets when a challenge begins.",
+      "roles": [
+        "choice_source"
+      ],
+      "reads": [
+        "rerolls",
+        "beaconChoices"
+      ],
+      "archetypes": [
+        "reroll_spam"
+      ],
+      "verified": true,
+      "notes": "At +2/reroll the 6-choice cap is reached in two rerolls, so reroll_spam is genuinely viable. Confirms the archetype.",
+      "resolvedBy": "user, 2026-07-21 — guide was right (+2), wiki wrong (+1)."
+    },
+    {
+      "id": "route_indigo",
+      "name": "Route Indigo",
+      "effect": "Purple and Blue Beacons are obscured but always Greatly Empowered — quantified by the user's guide as equivalent to a Vibrant Aqua boost.",
+      "roles": [
+        "boon_amplifier",
+        "pull_generator"
+      ],
+      "reads": [
+        "beaconUses.purple",
+        "beaconUses.blue"
+      ],
+      "archetypes": [],
+      "notes": "The 'Vibrant Aqua equivalent' quantification makes this scorable rather than vague — but it was measured under the OLD multiplicative model, so re-check under 2.2.1 additive boosting. Obscured = hidden information: the engine knows the tier here even though the player cannot see it."
+    },
+    {
+      "id": "ostinato",
+      "name": "Ostinato",
+      "effect": "Taking a Boon type you already hold grants +1 Pull per duplicate; boons lose 50% Potency per duplicate type.",
+      "roles": [
+        "pull_generator"
+      ],
+      "reads": [
+        "boonTypes",
+        "boons"
+      ],
+      "archetypes": [
+        "ostinato"
+      ],
+      "notes": "INVERTS boon-selection advice: normally avoid duplicates, with Ostinato deliberately stack them. Hard anti-synergy with Opal Offering (which wants high potency)."
+    },
+    {
+      "id": "porphyrophobia",
+      "name": "Porphyrophobia",
+      "effect": "Being offered a Purple Beacon grants +1 Curse. Purple Beacons give double Pulls.",
+      "roles": [
+        "pull_generator",
+        "curse_generator"
+      ],
+      "reads": [
+        "curses",
+        "beaconOffers.purple"
+      ],
+      "archetypes": [
+        "curse_stack"
+      ],
+      "notes": "Triggers on OFFER, not on take. Pairs with Equilibrium (curses -> boon potency)."
+    },
+    {
+      "id": "radiant_hunter",
+      "name": "Radiant Hunter",
+      "effect": "+1 Pull per Radiant Challenge mob defeated (max +5/challenge). Cleanse 1 Radiant CHANCE curse per 15 Pulls gained this way.",
+      "roles": [
+        "pull_generator",
+        "curse_cleanser"
+      ],
+      "reads": [
+        "radiantMobsKilled",
+        "curses.radiance"
+      ],
+      "archetypes": [
+        "radiance"
+      ],
+      "notes": "Radiance curse type is NEW in 2.2.0 — this archetype is under-explored and guides predating April 2026 will not cover it."
+    },
+    {
+      "id": "equilibrium",
+      "name": "Equilibrium",
+      "effect": "Gaining a Curse boosts next Boon's Potency by +100% (max +600%).",
+      "roles": [
+        "boon_amplifier"
+      ],
+      "reads": [
+        "curses",
+        "boonPotency"
+      ],
+      "archetypes": [
+        "curse_stack"
+      ],
+      "changedIn": "2.2.1 — boost +50% -> +100%, cap +300% -> +600%. This is a 2x buff to the whole curse_stack archetype.",
+      "notes": "SEQUENCING RULE: bank 6 curses BEFORE taking a Blue Beacon (6 x +100% = the +600% cap). The '6 curses' figure survives the rebalance by coincidence — derive it as cap/perCurse, never hardcode it."
+    },
+    {
+      "id": "inner_peace",
+      "name": "Inner Peace",
+      "effect": "Curses are half as effective.",
+      "roles": [
+        "curse_mitigator"
+      ],
+      "reads": [
+        "curses"
+      ],
+      "archetypes": [
+        "curse_stack"
+      ],
+      "notes": "Mitigates the DIFFICULTY of curses without removing them, so curse-count payoffs (Madman, Equilibrium) still fire. That is why it appears in curse-stack lists despite sounding contradictory."
+    },
+    {
+      "id": "optimism",
+      "name": "Optimism",
+      "effect": "A rerolled beacon will not be re-offered unless options run out.",
+      "roles": [
+        "reroll_amplifier"
+      ],
+      "reads": [
+        "rerolls"
+      ],
+      "archetypes": [
+        "reroll_spam"
+      ],
+      "notes": "Turns rerolls from random into a search. Massively raises P(finding rainbow/orange)."
+    },
+    {
+      "id": "high_spirits",
+      "name": "High Spirits",
+      "effect": "+50% Vibrancy Chance.",
+      "roles": [
+        "tier_amplifier"
+      ],
+      "reads": [
+        "vibrancyChance"
+      ],
+      "archetypes": [],
+      "notes": "Universal but low-variance. Changes the offer model, not the decision rule."
+    },
+    {
+      "id": "beleza_pura",
+      "name": "Beleza Pura",
+      "effect": "If an Aqua Beacon is offered, all other offered beacons are boosted by that Aqua.",
+      "roles": [
+        "tier_amplifier"
+      ],
+      "reads": [
+        "beaconOffers.aqua"
+      ],
+      "archetypes": [],
+      "notes": "Removes the aqua-then-payoff sequencing cost entirely. Very strong; changes aqua priority from 'take and hold' to 'ignore, take the payoff directly'."
+    },
+    {
+      "id": "backup_beat",
+      "name": "Backup Beat",
+      "effect": "+1 Beacon Reroll per +300s added to your timer.",
+      "roles": [
+        "reroll_source"
+      ],
+      "reads": [
+        "totalTimeGained"
+      ],
+      "archetypes": [
+        "reroll_spam"
+      ],
+      "notes": "Reads CUMULATIVE time gained, not the displayed timer. Overcapping is therefore not purely wasteful for Backup Beat — but it does forfeit the +60s/+90s challenge grants, so sitting at cap has a real cost.",
+      "overcapRule": "Time gained ABOVE the 15-minute soft cap still counts toward Backup Beat and other timer-based mission requirements, even though the timer does not display it. BUT no time registers from entering/completing a challenge while the timer is already above 15 minutes."
+    },
+    {
+      "id": "requiem",
+      "name": "Requiem",
+      "effect": "For 15 minutes, mob stat increases are voided — BOTH passive enemy buffs from completing challenges AND any curses obtained.",
+      "roles": [
+        "curse_mitigator"
+      ],
+      "reads": [
+        "curses",
+        "elapsedTime"
+      ],
+      "archetypes": [],
+      "notes": "Time-boxed panic button. Enables an otherwise-lethal curse stack. Track expiry.",
+      "resolvedBy": "Guide, 2026-07-21 — richer than the wiki, and settles the earlier wiki-vs-guide ambiguity: it voids curses too, not just scaling."
+    },
+    {
+      "id": "stasis",
+      "name": "Stasis",
+      "effect": "Timer does not decrease while picking a Beacon (max 5m).",
+      "roles": [
+        "time_source"
+      ],
+      "reads": [
+        "timeRemaining"
+      ],
+      "archetypes": [
+        "speedrun"
+      ],
+      "notes": "Directly subsidises the deliberation this app requires. Quietly one of the best missions for an advisor user."
+    },
+    {
+      "id": "chronokinesis",
+      "name": "Chronokinesis",
+      "effect": "Qualifying chests give +1 Pull but consume 10s (+5s per chest) from the timer. Completing a challenge reduces the penalty by 15s.",
+      "verified": true,
+      "roles": [
+        "pull_generator"
+      ],
+      "reads": [
+        "timeRemaining",
+        "qualifyingChestsOpened",
+        "challengesCompleted",
+        "camp",
+        "challengeTypeMix"
+      ],
+      "archetypes": [
+        "speedrun",
+        "chronotrigger"
+      ],
+      "notes": "CAMP-DEPENDENT VALUE. Far more precise than \"non-flying\": it depends on CHALLENGE TYPE (spelunk yes, slay/defend/destroy no) and on the camp's environmental chest density. Chronokinesis cannot be scored without knowing the camp, so camp must be a run-setup input.",
+      "resolvedBy": "user, 2026-07-21 — explicitly non-flying. Wiki right, guide wrong.",
+      "qualifyingChests": {
+        "counts": [
+          "Environmental chests (naturally generated in the world)",
+          "Chests from Spelunk challenges (cave-generated)"
+        ],
+        "doesNotCount": [
+          "Flying chests",
+          "Chests generated after Slay, Defend and Destroy challenges"
+        ]
+      },
+      "campDependent": {
+        "best": "Corkus — many multi-chest spelunk challenges plus a high density of environmental chests",
+        "second": "Molten Heights — many easily reachable environmental chests"
+      }
+    },
+    {
+      "id": "thrill_seeker",
+      "name": "Thrill Seeker",
+      "effect": "+1 Pull per Red Beacon challenge completed, increased by +1 per 7 challenges completed (max +3). RESET by taking a Green Beacon.",
+      "changedIn": "2.2.1 — completely reworked from '1 Boon per 5 Red Beacons'. Scaling interval is now 7 challenges, not 6.",
+      "roles": [
+        "pull_generator",
+        "boon_generator"
+      ],
+      "reads": [
+        "beaconUses.red",
+        "challengesCompleted",
+        "beaconUses.green"
+      ],
+      "archetypes": [
+        "speedrun"
+      ],
+      "notes": "CONFLICT RULE: green resets the stack, but green is the timeout guard. Advisor must surface this tradeoff explicitly rather than silently picking.",
+      "verified": true,
+      "resolvedBy": "user, 2026-07-21 — green reset survives the 2.2.1 rework."
+    },
+    {
+      "id": "knife_edge",
+      "name": "Knife Edge",
+      "effect": "+7 Pulls on challenge completion, reduced by 1 per challenge remaining (min 0).",
+      "roles": [
+        "pull_generator"
+      ],
+      "reads": [
+        "challengesRemaining"
+      ],
+      "archetypes": [
+        "endgame"
+      ],
+      "notes": "HARD ANTI-SYNERGY with White/Red beacons and Sacrificial Ritual. Literally zero value above 7 challenges remaining. Classic trap pick."
+    },
+    {
+      "id": "kings_court",
+      "name": "King's Court",
+      "effect": "+1 Crimson Beacon added to your pool.",
+      "cost": "Occupies a Mission slot to yield a Trial — i.e. it TRADES a mission for a trial.",
+      "roles": [
+        "trial_source"
+      ],
+      "reads": [
+        "beaconUses.crimson"
+      ],
+      "archetypes": [],
+      "notes": "The trade is the whole story and the wiki omits it. With only ~3 mission slots, this is not a free '+1 crimson' — it costs a third of your mission capacity. Scorer must charge it the full opportunity cost of the best mission you would otherwise take."
+    },
+    {
+      "id": "high_roller",
+      "name": "High Roller",
+      "effect": "+1 End Reward Reroll and +10 Pulls.",
+      "roles": [
+        "pull_generator",
+        "reward_reroll_source"
+      ],
+      "reads": [],
+      "archetypes": [
+        "universal"
+      ],
+      "notes": "Stateless, unconditional value. The correct default when no archetype has formed."
+    },
+    {
+      "id": "redemption",
+      "name": "Redemption",
+      "effect": "+1 End Reward Sacrifice.",
+      "roles": [
+        "sac_source"
+      ],
+      "reads": [],
+      "archetypes": [
+        "universal"
+      ],
+      "notes": "Stateless. Each sac saves 50% of unsaved pulls (2 sacs = 75%, 3 = 87.5%) — diminishing, so cap the stack."
+    },
+    {
+      "id": "sacrificial_ritual",
+      "name": "Sacrificial Ritual",
+      "effect": "On finishing a challenge, consume 1 Pull to gain +3 Challenges.",
+      "roles": [
+        "challenge_source"
+      ],
+      "reads": [
+        "pulls",
+        "challengesRemaining"
+      ],
+      "archetypes": [
+        "endgame"
+      ],
+      "notes": "Converts pulls into runway. Fails on the final challenge. Hard anti-synergy with Knife Edge."
+    },
+    {
+      "id": "complete_chaos",
+      "name": "Complete Chaos",
+      "effect": "After finishing a Challenge, get an additional random Beacon reward — drawn from beacons still AVAILABLE in your pool, weighted by beacon rarity.",
+      "roles": [
+        "boon_generator",
+        "pull_generator",
+        "chest_generator"
+      ],
+      "reads": [],
+      "archetypes": [
+        "universal"
+      ],
+      "notes": "Its EV is computable rather than hand-waved: draw from legalColors() minus {crimson, grey}, weighted by rarity. Because it is rarity-weighted toward common beacons, treat it as a weak generator — it must not satisfy the runnable predicate alone. Note the interaction: taking white/darkGrey REMOVES them from the Complete Chaos pool.",
+      "intrinsics": {
+        "neverGives": [
+          "crimson (trials)",
+          "grey (missions)"
+        ],
+        "poolLimited": "Cannot give effects of beacons already exhausted — e.g. no white or darkGrey effects once taken.",
+        "rarityWeighted": "Common beacons (yellow/blue/purple) are far likelier than rare ones (orange/rainbow)."
+      },
+      "strength": "weak"
+    },
+    {
+      "id": "unknown_2_2_1_missions",
+      "name": "PLACEHOLDER — 6 unnamed missions added in 2.2.1",
+      "effect": null,
+      "roles": [],
+      "reads": [],
+      "verified": false,
+      "blocking": true,
+      "notes": "2.2.1 (12 Jun 2026) states 'Added six new Lootrun Missions' without naming them, and the wiki mission table has not been updated. These must be collected in-game. Until then the mission pool is ~29/35 complete, so any probability the simulator reports over mission offers is biased. Surface that caveat in the UI."
+    }
+  ],
+  "renamed": [
+    {
+      "id": "cleansing_ritual",
+      "oldName": "Cleansing Ritual",
+      "newId": "sacrificial_ritual",
+      "newName": "Sacrificial Ritual",
+      "status": "RENAMED AND REWORKED",
+      "confirmedBy": "user 2026-07-21; corroborated by the guide, which labels Sacrificial Ritual 'former Cleansing Ritual'",
+      "CRITICAL": "The name carried over but the EFFECT did not. Old Cleansing Ritual was a curse cleanser ('lets you ignore Red and Green beacons entirely'). Sacrificial Ritual consumes 1 Pull for +3 Challenges — a challenge-extension effect with no cleansing whatsoever.",
+      "notes": "This is the most dangerous kind of stale data: advice written for the old effect still parses as valid because a mission by a similar name exists. Any guide recommending 'Cleansing Ritual' as a cleanser is describing an effect that is GONE, and its recommendation must NOT be transferred to Sacrificial Ritual. Correctly removed from all curse_cleanser roles and archetype follow-up lists."
+    }
+  ],
+  "sourcePolicy": {
+    "precedence": [
+      "1. User in-game confirmation (highest)",
+      "2. Official version changelogs",
+      "3. Wiki Lootrunning page",
+      "4. Community guide (Google Doc)"
+    ],
+    "why": "Neither wiki nor guide is uniformly ahead. User confirmed Gourmand +2 (guide right, wiki wrong) AND Chronokinesis non-flying (wiki right, guide wrong). A blanket \"trust source X\" rule would import errors from whichever was chosen.",
+    "guideStatus": "Re-checked 2026-07-21: the guide Missions tab still lists PRE-2.2.1 values (Hoarder 8 chests/300%, Equilibrium +50%/+300%, Jester +30s, Thrill Seeker per 6). Its Changelogs and Run Setup tabs ARE current. Tabs drifted independently — do not treat the doc as uniformly updated.",
+    "method": "Wiki page as base -> replay every changelog -> override with user confirmation. Each record carries changedIn / resolvedBy so provenance stays auditable."
+  }
+}

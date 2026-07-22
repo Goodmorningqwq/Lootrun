@@ -1,0 +1,104 @@
+{
+  "wynncraftVersion": "2.2.1",
+  "criticalChange_2_2_1": "Beacon boosting is now ADDITIVE, not multiplicative, AND unpowered beacons were buffed while powered beacons were nerfed. Aqua-stacking is therefore substantially weaker than every pre-June-2026 guide assumes. All `beaconBias` values for aqua below are inherited from the old multiplicative meta and are FLAGGED FOR RE-DERIVATION — do not trust them.",
+  "note": "Archetypes are the mechanism for conditional mission priority. Your FIRST mission largely commits the run (only ~3 grey beacons exist). `core` missions identify the archetype; `followups` are ordered tiers — items within a tier are equal-value. This replaces hardcoded if/then chains.",
+  "archetypes": [
+    {
+      "id": "flying_chest",
+      "name": "Flying Chest Engine",
+      "core": ["jesters_trick", "interest_scheme", "hoarder"],
+      "enablers": ["materialism"],
+      "followups": [
+        ["orphions_grace"],
+        ["materialism"],
+        ["high_roller", "redemption"]
+      ],
+      "boonPreference": ["serendipity", "looter", "parsimonious", "midas_touch"],
+      "trialPreference": ["side_hustle", "monochromokopia"],
+      "beaconBias": { "yellow": 30, "blue": -10 },
+      "notes": "Self-sustaining pull->chest->boon loop. Hoarder makes Blue Beacons largely redundant, so blue is downranked once online."
+    },
+    {
+      "id": "curse_stack",
+      "name": "Curse Stacking",
+      "core": ["equilibrium", "porphyrophobia"],
+      "followups": [
+        ["high_roller", "redemption"],
+        ["inner_peace", "orphions_grace"],
+        ["opal_offering"]
+      ],
+      "boonPreference": ["madman", "bad_omen", "lightbringer"],
+      "trialPreference": ["all_in", "dying_light"],
+      "beaconBias": { "purple": 40, "green": -15 },
+      "sequencing": [
+        {
+          "when": "missions includes equilibrium",
+          "rule": "Bank 6 curses before taking a Blue Beacon (6 x +100% = +600% potency cap, per 2.2.1).",
+          "why": "Taking blue early wastes the entire Equilibrium multiplier."
+        },
+        {
+          "when": "boons includes madman",
+          "rule": "Hold >= 8 curses before taking Madman.",
+          "why": "Madman caps at 8 curses; it is a static snapshot, so it never improves after being taken."
+        }
+      ],
+      "buffedIn": "2.2.1 doubled Equilibrium (+50%->+100%, cap +300%->+600%). This archetype is now materially stronger than community guides rate it.",
+      "notes": "Inner Peace belongs here despite sounding contradictory: it halves curse DIFFICULTY while curse COUNT payoffs still fire."
+    },
+    {
+      "id": "reroll_spam",
+      "name": "Beacon Reroll Spam",
+      "core": ["gourmand", "optimism"],
+      "followups": [
+        ["high_roller", "redemption"],
+        ["backup_beat"],
+        ["thrill_seeker"],
+        ["orphions_grace"]
+      ],
+      "boonPreference": ["heavensent", "persnickety"],
+      "beaconBias": { "pink": 50, "orange": 30 },
+      "notes": "Gourmand + Optimism turns each reroll into a directed search for rainbow/orange. Requires reroll income — Pink Beacon (new in 2.2.0) made this archetype substantially stronger."
+    },
+    {
+      "id": "radiance",
+      "name": "Radiance (2.2.0)",
+      "core": ["radiant_hunter"],
+      "followups": [["high_roller", "redemption"], ["orphions_grace"]],
+      "trialPreference": ["lights_out"],
+      "confidence": "low",
+      "notes": "NEW in 2.2.0 and under-documented. Lights Out feeds Radiance curses; Radiant Hunter converts them to pulls. Encode with low confidence and flag in UI until validated by real runs."
+    },
+    {
+      "id": "sac_stack",
+      "name": "Sacrifice Stacking",
+      "core": ["redemption"],
+      "followups": [["high_roller"], ["orphions_grace"]],
+      "trialPreference": ["all_in", "ultimate_sacrifice", "dying_light"],
+      "caps": { "sacMissionsBeforeChallenge30": 3 },
+      "notes": "All In converts each sac into +3 rerolls at run end. Sacs have diminishing returns (50%/75%/87.5%) so cap the stack at 3 and pivot to rerolls."
+    },
+    {
+      "id": "speedrun",
+      "name": "Token Assisted Speedrun",
+      "core": ["chronokinesis", "stasis"],
+      "followups": [["thrill_seeker"], ["high_roller", "redemption"]],
+      "beaconBias": { "red": 30, "green": -20 },
+      "expectedPulls": "2000+",
+      "confidence": "low",
+      "notes": "Highest ceiling per the source guide. Chronokinesis is a trap without time surplus, so this archetype needs a strict time floor."
+    },
+    {
+      "id": "endgame",
+      "name": "Endgame Cash-Out",
+      "core": ["knife_edge"],
+      "conflicts": ["sacrificial_ritual"],
+      "notes": "Not a run plan — a LATE pivot. Knife Edge pays 7 minus challengesRemaining, so it is worth zero until the run is nearly over. Never offer it as an early pick."
+    },
+    {
+      "id": "universal",
+      "name": "No Commitment",
+      "core": ["high_roller", "redemption", "complete_chaos"],
+      "notes": "The correct fallback when no archetype has formed. These are stateless and never dead. Prefer them over a speculative archetype core when only 1 grey beacon remains."
+    }
+  ]
+}

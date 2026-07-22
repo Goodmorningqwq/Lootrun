@@ -1,0 +1,286 @@
+{
+  "wynncraftVersion": "2.2.1",
+  "verified": "2026-07-21",
+  "incomplete": "2.2.1 added ONE new trial, unnamed in the changelog and absent from the wiki. See `unknown_2_2_1_trial`.",
+  "note": "Max 2 trials per run (Crimson x2, +1 via King's Court). Each is a long-lived state flag with a completion condition. `behaviourFlags` are rules that must override normal advice while active.",
+  "trials": [
+    {
+      "id": "adrenaline_junkie",
+      "name": "Adrenaline Junkie",
+      "requirement": "Lose 1 Boon every 25s during interludes until you gain 25 Pulls.",
+      "reward": "+2 End Reward Rerolls",
+      "reads": [
+        "pulls",
+        "boonPotency"
+      ],
+      "behaviourFlags": [
+        "minimise_interlude_time"
+      ],
+      "risk": "medium",
+      "notes": "Punishes deliberation — i.e. punishes using this app. Pairs with Stasis.",
+      "guideTier": "A",
+      "guideNote": "Cross interludes fast to minimise boon loss."
+    },
+    {
+      "id": "dying_light",
+      "name": "Dying Light",
+      "requirement": "Boons lose 5% Potency every 2.5s, one by one, until you hold Boons totalling 800% Potency.",
+      "reward": "Rainbow Beacons grant +1 End Reward Sacrifice.",
+      "reads": [
+        "boonPotency"
+      ],
+      "behaviourFlags": [
+        "needs_boon_potency_engine"
+      ],
+      "risk": "high",
+      "archetypes": [
+        "sac_stack"
+      ],
+      "notes": "Requires Equilibrium/Orphion's Grace to hit +800%. Guide pairs it with All In for extreme reroll counts.",
+      "guideTier": "A",
+      "guideNote": "Works extremely well with All In."
+    },
+    {
+      "id": "monochromokopia",
+      "name": "Monochromokopia",
+      "requirement": "Until +30 Pulls: completed beacons become Obscured for 7 challenges.",
+      "reward": "Adds an extra White, Grey and Dark Grey Beacon to the pool.",
+      "reads": [
+        "pulls"
+      ],
+      "behaviourFlags": [
+        "hidden_information"
+      ],
+      "risk": "medium",
+      "notes": "Reward is excellent (extra White = more challenges, extra Grey = 4th mission). Obscured beacons mean the advisor must reason under uncertainty for 7 challenges.",
+      "guideTier": "C",
+      "guideNote": "DO NOT TAKE. Completed beacons become unidentifiable.",
+      "CORRECTION": "I called the reward excellent. Guide rates it C and advises against it — the obscuring cost outweighs the extra White/Grey/DarkGrey."
+    },
+    {
+      "id": "chronotrigger",
+      "name": "Chronotrigger",
+      "requirement": "For 12 challenges you cannot gain time in any way.",
+      "reward": "Green Beacons cleanse 7.5% of Curses and boost Pulls by 1% per curse cleansed (max 5%).",
+      "changedIn": "2.2.1 — pull boost cap 3.5% -> 5%. (Changelog also claimed cleanse 15% -> 10%, but the in-game value is 7.5% — changelog wrong or superseded.)",
+      "reads": [
+        "timeRemaining",
+        "challengesCompleted",
+        "curses"
+      ],
+      "behaviourFlags": [
+        "no_time_gain",
+        "disable_green_priority",
+        "disable_backup_beat"
+      ],
+      "risk": "high",
+      "archetypes": [
+        "chronotrigger"
+      ],
+      "notes": "DISABLES THE TIMEOUT GUARD for 12 challenges — the single most dangerous interaction in the game for an advisor to get wrong. Hard-blocks Backup Beat.",
+      "guideTier": "S",
+      "objective": "Complete 12 challenges",
+      "guideNote": "Time penalties from dying still apply. Green beacons void mob buffs and work from Complete Chaos.",
+      "resolvedBy": "user, 2026-07-22 — cleanse 7.5% (guide right), pull boost cap 5% (changelog right). Each source had half the truth."
+    },
+    {
+      "id": "all_in",
+      "name": "All In",
+      "requirement": "For the next 10 challenges curse effects are doubled. Objective: complete 12 challenges.",
+      "reward": "At run end, convert each End Reward Sacrifice into +3 End Reward Rerolls.",
+      "reads": [
+        "curses"
+      ],
+      "behaviourFlags": [
+        "curse_danger_x2"
+      ],
+      "risk": "high",
+      "archetypes": [
+        "sac_stack"
+      ],
+      "notes": "Converts the Redemption/sac axis into rerolls. Wants MANY sacs banked before run end.",
+      "guideTier": "B",
+      "guideNote": "Provides no sacrifices itself — most effective paired with Dying Light."
+    },
+    {
+      "id": "gambling_beast",
+      "name": "Gambling Beast",
+      "requirement": "Lose 300 + 90(n-1) seconds on the nth challenge completed. Effects active IMMEDIATELY on taking.",
+      "reward": "+1 End Reward Reroll per challenge completed",
+      "reads": [
+        "timeRemaining",
+        "challengesCompleted"
+      ],
+      "behaviourFlags": [
+        "run_ending",
+        "fails_on_last_challenge"
+      ],
+      "risk": "high",
+      "notes": "Escalating cost ends the run in ~3 challenges. Correct ONLY as a deliberate final-act cash-out when no good combo formed — exactly the guide's fallback rule.",
+      "guideTier": "A",
+      "guideNote": "SHOULD ALMOST ALWAYS BE TAKEN AS 2ND TRIAL. Stack Vibrant Aqua/Green beacons to sustain it. Grants no reroll if the timer cannot absorb the cost.",
+      "CORRECTION": "I rated this extreme/salvage-only. The guide rates it A tier and a near-DEFAULT second trial. My salvage-only framing was wrong."
+    },
+    {
+      "id": "hubris",
+      "name": "Hubris",
+      "requirement": "For 10 challenges, dying ends your Lootrun.",
+      "reward": "+1 End Reward Reroll and +1 End Reward Sacrifice.",
+      "reads": [
+        "challengesCompleted"
+      ],
+      "behaviourFlags": [
+        "never_kill_command",
+        "death_ends_run"
+      ],
+      "risk": "high",
+      "notes": "Must produce a persistent UI warning: /kill ends the run instantly.",
+      "guideTier": "S",
+      "objective": "Complete 10 challenges",
+      "guideNote": "Sleeper pick — easy trial with good rewards."
+    },
+    {
+      "id": "lights_out",
+      "name": "Lights Out",
+      "requirement": "Until 25 Radiant Challenge Mobs defeated: receive 2 Radiance Chance Curses after every challenge.",
+      "reward": "+4 Pulls per Radiant Power/Chance curse held, then cleanse them.",
+      "reads": [
+        "radiantMobsKilled",
+        "curses.radiance"
+      ],
+      "behaviourFlags": [
+        "radiance_engine"
+      ],
+      "risk": "medium",
+      "archetypes": [
+        "radiance"
+      ],
+      "notes": "Radiance is NEW in 2.2.0. Pairs directly with Radiant Hunter. Under-documented — high value to model well.",
+      "guideTier": "S",
+      "guideNote": "Avoid multi-mob challenges; use Inner Peace to slow radiance buildup."
+    },
+    {
+      "id": "side_hustle",
+      "name": "Side Hustle",
+      "requirement": "Until 30 chests opened: starting/completing/failing a challenge sets timer to 75s.",
+      "reward": "+2 End Reward Rerolls",
+      "reads": [
+        "chestsOpened",
+        "timeRemaining"
+      ],
+      "behaviourFlags": [
+        "timer_clamped_75s"
+      ],
+      "risk": "high",
+      "notes": "SETS the timer (not reduces) — a hard clamp that invalidates all normal time reasoning while active.",
+      "guideTier": "A",
+      "guideNote": "Timer resets at beacons; dying between challenges costs time; time still gained on red beacons."
+    },
+    {
+      "id": "treasury_bill",
+      "name": "Treasury Bill",
+      "requirement": "Lose 1 Pull every 45s until you obtain 20 end reward pulls. The loss REMOVES trial progress.",
+      "reward": "Boost Current Pulls by +75%.",
+      "reads": [
+        "pulls"
+      ],
+      "risk": "medium",
+      "notes": "Take LATE with a large pull bank — +75% of a big number. Guide: complete via aqua-stacking purples under rainbow.",
+      "guideTier": "A",
+      "guideNote": "Pair with Lights Out; complete via Purple/Dark Grey beacon stacking."
+    },
+    {
+      "id": "ultimate_sacrifice",
+      "name": "Ultimate Sacrifice",
+      "requirement": "For 10 challenges, your boons are disabled.",
+      "reward": "+2 End Reward Sacrifices",
+      "reads": [
+        "boons",
+        "challengesCompleted"
+      ],
+      "behaviourFlags": [
+        "boons_disabled",
+        "deprioritise_blue"
+      ],
+      "risk": "high",
+      "archetypes": [
+        "sac_stack"
+      ],
+      "notes": "Blue Beacons are near-worthless for 10 challenges — advisor must actively downrank blue and boon-generators while active.",
+      "guideTier": "S",
+      "objective": "Complete 10 challenges",
+      "guideNote": "Recommended as FIRST trial when mob scaling is still low."
+    },
+    {
+      "id": "warmth_devourer",
+      "name": "Warmth Devourer",
+      "requirement": "Lose 1 Boon AND 1 Challenge per challenge completed, until you obtain 20 end reward pulls.",
+      "reward": "+1 End Reward Reroll and +1 End Reward Sacrifice.",
+      "reads": [
+        "pulls",
+        "challengesRemaining"
+      ],
+      "behaviourFlags": [
+        "challenge_drain_x3"
+      ],
+      "risk": "low-if-boonless",
+      "notes": "Burns 4 challenges per challenge completed. Needs a large challenge bank (post White) or it ends the run.",
+      "guideTier": "A",
+      "EXPLOIT": "With NO boons held, the trial cannot remove challenges — but still grants its rewards. Effectively free when boon-less."
+    },
+    {
+      "id": "imperitia",
+      "name": "Imperitia",
+      "requirement": "Until +30 Pulls: spell costs increase by +5 Mana per challenge completed.",
+      "reward": "+2 End Reward Sacrifices",
+      "reads": [
+        "pulls",
+        "challengesCompleted"
+      ],
+      "behaviourFlags": [
+        "build_dependent"
+      ],
+      "risk": "medium",
+      "notes": "Difficulty depends on the player's BUILD, which is outside the state machine. Should be a user-declared preference, not an engine calculation.",
+      "guideTier": "F",
+      "guideNote": "Never ever take this. Spell cost increase works like Outworn Soldier Gambit; only overridable by the Transcendence major ID.",
+      "CORRECTION": "I rated this medium risk. Guide rates it unplayable."
+    },
+    {
+      "id": "unknown_2_2_1_trial",
+      "name": "PLACEHOLDER — 1 unnamed trial added in 2.2.1",
+      "requirement": null,
+      "reward": null,
+      "reads": [],
+      "verified": false,
+      "blocking": true,
+      "notes": "Must be collected in-game. With only 2 trial slots per run, one unknown trial out of 14 is a meaningful gap in crimson-beacon advice."
+    }
+  ],
+  "tierList": {
+    "source": "Guide Trials tab",
+    "S": [
+      "hubris",
+      "ultimate_sacrifice",
+      "chronotrigger",
+      "lights_out"
+    ],
+    "A": [
+      "treasury_bill",
+      "side_hustle",
+      "adrenaline_junkie",
+      "warmth_devourer",
+      "gambling_beast",
+      "dying_light"
+    ],
+    "B": [
+      "all_in"
+    ],
+    "C": [
+      "monochromokopia"
+    ],
+    "neverTake": [
+      "imperitia"
+    ]
+  }
+}

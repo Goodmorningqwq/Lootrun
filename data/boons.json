@@ -1,0 +1,107 @@
+{
+  "wynncraftVersion": "2.2.0",
+  "verified": "2026-07-21",
+  "note": "DYNAMIC boons accrue over the REST of the run (worth more EARLY). STATIC boons snapshot your CURRENT state immediately (worth more LATE). This single field flips blue-beacon advice and is the main reason boons must be tracked.",
+  "changes_2_2_0": "Boosted (empowered) Blue Beacons now increase Boon strength — previously they did not.",
+  "boons": [
+    {
+      "id": "persnickety", "name": "Persnickety", "kind": "dynamic",
+      "scalesWith": "blueOrPurpleOffers", "threshold": 20, "cap": null,
+      "reads": ["beaconOffers.blue", "beaconOffers.purple"],
+      "notes": "Threshold gate, not a stack. Worthless if taken late."
+    },
+    {
+      "id": "picky_looter", "name": "Picky Looter", "kind": "dynamic",
+      "scalesWith": "yellowOffers", "cap": 15,
+      "reads": ["beaconOffers.yellow"]
+    },
+    {
+      "id": "heavensent", "name": "Heavensent", "kind": "dynamic",
+      "scalesWith": "beaconsOffered", "cap": 15,
+      "reads": ["beaconOffers.total"],
+      "notes": "Best early-run dynamic boon: every beacon counts, and orange (+choices) accelerates it."
+    },
+    {
+      "id": "slowrunner", "name": "Slowrunner", "kind": "dynamic",
+      "scalesWith": "lowTimer", "condition": "timeRemaining < 6m", "cap": null,
+      "reads": ["timeRemaining"],
+      "notes": "Rewards exactly the state the timeout guard tries to avoid. Genuine tension — flag it, do not auto-resolve."
+    },
+    {
+      "id": "clockworker", "name": "Clockworker", "kind": "dynamic",
+      "scalesWith": "minutesRemaining", "cap": 15,
+      "reads": ["timeRemaining"],
+      "notes": "Direct opposite of Slowrunner. Never hold both."
+    },
+    {
+      "id": "looter", "name": "Looter", "kind": "dynamic",
+      "scalesWith": "itemsOffered", "per": 4, "cap": 15,
+      "reads": ["itemsOffered"],
+      "trackingCost": "high"
+    },
+    {
+      "id": "serendipity", "name": "Serendipity", "kind": "dynamic",
+      "scalesWith": "chestsOpened", "cap": 15,
+      "reads": ["chestsOpened"]
+    },
+    {
+      "id": "bad_omen", "name": "Bad Omen", "kind": "dynamic",
+      "scalesWith": "cursesGained", "cap": 8,
+      "reads": ["curses"],
+      "archetypes": ["curse_stack"]
+    },
+    {
+      "id": "midas_touch", "name": "Midas Touch", "kind": "dynamic",
+      "scalesWith": "boonsGained", "cap": 8,
+      "reads": ["boons"],
+      "notes": "Needs a boon engine (Hoarder) to pay off."
+    },
+    {
+      "id": "killstreak", "name": "Killstreak", "kind": "dynamic",
+      "scalesWith": "mobKills", "per": 10, "duration": "60s refreshing",
+      "reads": ["mobsKilled"],
+      "trackingCost": "high"
+    },
+    {
+      "id": "persistent_champion", "name": "Persistent Champion", "kind": "dynamic",
+      "scalesWith": "challengesCompleted", "cap": 15,
+      "reads": ["challengesCompleted"]
+    },
+    {
+      "id": "patient_champion", "name": "Patient Champion", "kind": "dynamic",
+      "scalesWith": "challengesCompleted", "threshold": 20,
+      "reads": ["challengesCompleted"],
+      "notes": "Threshold gate — only take if >=20 challenges are realistically reachable."
+    },
+    {
+      "id": "parsimonious", "name": "Parsimonious", "kind": "static",
+      "scalesWith": "itemsOffered", "per": 10, "cap": 15,
+      "reads": ["itemsOffered"],
+      "trackingCost": "high"
+    },
+    {
+      "id": "madman", "name": "Madman", "kind": "static",
+      "scalesWith": "currentCurses", "cap": 8,
+      "reads": ["curses"],
+      "archetypes": ["curse_stack"],
+      "notes": "THE reason the guide says 'keep at least 8 curses active' — 8 is exactly Madman's cap. Encode as a strategy threshold, not a magic number."
+    },
+    {
+      "id": "lightbringer", "name": "Lightbringer", "kind": "static",
+      "scalesWith": "currentBoons", "cap": 5,
+      "reads": ["boons"]
+    },
+    {
+      "id": "mob_slaughter", "name": "Mob Slaughter", "kind": "static",
+      "scalesWith": "mobsKilled", "per": 10, "cap": 15,
+      "reads": ["mobsKilled"],
+      "trackingCost": "high"
+    },
+    {
+      "id": "retrograde_champion", "name": "Retrograde Champion", "kind": "static",
+      "scalesWith": "challengesCompleted", "cap": 10,
+      "reads": ["challengesCompleted"],
+      "notes": "Capped at 10 — so it is maxed by challenge 10 and is NOT a late-run scaling pick despite being static."
+    }
+  ]
+}

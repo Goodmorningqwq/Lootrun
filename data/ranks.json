@@ -1,0 +1,25 @@
+{
+  "wynncraftVersion": "2.2.1",
+  "source": "wynncraft.wiki.gg/wiki/Lootrunning — Lootrun Division rank table",
+  "verified": "2026-07-22",
+  "note": "Ordered ladder. Rank gates beacon availability, starting rerolls, base choices and vibrancy chance. Beacons never listed as unlocks (blue/purple/yellow) are available from Rookie I.",
+  "uncertain": "Sentinel II grants '+1 default Beacon Choice' — with the confirmed base of 2 at high ranks, base below Sentinel II is inferred to be 1 (an offer of one beacon = no choice). Low confidence; correct in-game if wrong. Same for its '+1 default Boon Choice'.",
+  "ranks": [
+    { "id": "rookie_1", "name": "Rookie I" },
+    { "id": "rookie_2", "name": "Rookie II", "unlocksBeacon": "aqua" },
+    { "id": "rookie_3", "name": "Rookie III", "unlocksBeacon": "orange" },
+    { "id": "assistant_1", "name": "Assistant I", "beaconRerolls": 1 },
+    { "id": "assistant_2", "name": "Assistant II", "unlocksBeacon": "green" },
+    { "id": "assistant_3", "name": "Assistant III", "vibrancyChance": 0.05, "interludeWalkSpeed": 0.5 },
+    { "id": "sentinel_1", "name": "Sentinel I", "unlocksBeacon": "darkGrey" },
+    { "id": "sentinel_2", "name": "Sentinel II", "beaconChoices": 1, "boonChoices": 1 },
+    { "id": "sentinel_3", "name": "Sentinel III", "unlocksBeacon": "white" },
+    { "id": "elite_1", "name": "Elite I", "unlocksBeacon": "grey" },
+    { "id": "elite_2", "name": "Elite II", "vibrancyChance": 0.05, "dailyFreeRewardReroll": 1 },
+    { "id": "elite_3", "name": "Elite III", "unlocksBeacon": "red" },
+    { "id": "admiral", "name": "Admiral", "unlocksBeacon": "pink", "beaconRerolls": 1 },
+    { "id": "commander", "name": "Commander", "unlocksBeacon": "rainbow" },
+    { "id": "master", "name": "Master", "unlocksBeacon": "crimson" },
+    { "id": "grandmaster", "name": "Grandmaster" }
+  ]
+}

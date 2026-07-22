@@ -1,0 +1,66 @@
+{
+  "wynncraftVersion": "2.2.1",
+  "source": "Ultimate Wynncraft Lootrun Guide — Lootrun Camps tab",
+  "verified": "2026-07-21",
+  "why": "Camp is a REQUIRED run-setup input: Chronokinesis only counts environmental and Spelunk-challenge chests, so its value is camp-dependent (Missions footnote 2).",
+
+  "camps": [
+    {
+      "id": "canyon_of_the_lost",
+      "name": "Canyon of the Lost Excursion",
+      "difficultyRank": 1,
+      "notes": "By far the easiest camp — short caves, weak enemies."
+    },
+    {
+      "id": "molten_heights",
+      "name": "Molten Heights Hike",
+      "difficultyRank": 2,
+      "chronokinesisRank": 2,
+      "notes": "Smallest playable area, easily accessible challenges and many easily reachable environmental chests. Second-best chrono camp."
+    },
+    {
+      "id": "sky_islands",
+      "name": "Sky Islands Exploration",
+      "difficultyRank": 3,
+      "notes": "Requires aerial movement. Falling no longer ends runs."
+    },
+    {
+      "id": "corkus",
+      "name": "The Corkus Traversal",
+      "difficultyRank": 4,
+      "chronokinesisRank": 1,
+      "notes": "Biggest playable area with long convoluted caves. BEST chrono camp — many multi-chest Spelunk challenges plus a high density of environmental chests."
+    },
+    {
+      "id": "silent_expanse",
+      "name": "Silent Expanse Expedition",
+      "difficultyRank": 5,
+      "notes": "First major difficulty jump; scaling comparable to Fruma."
+    },
+    {
+      "id": "fruma_foray_west",
+      "name": "The Fruma Foray — West",
+      "difficultyRank": 6,
+      "addedIn": "2.2.0",
+      "notes": "Big enemy swarms and tight caves. Described as the most annoying. Recommended for Yellow (flying chest) runs."
+    },
+    {
+      "id": "fruma_foray_east",
+      "name": "The Fruma Foray — East",
+      "difficultyRank": 7,
+      "addedIn": "2.2.0",
+      "notes": "Currently the toughest camp by far. Recommended for Yellow runs."
+    }
+  ],
+
+  "spelunkChallenges": {
+    "note": "Named multi-step Spelunk challenges. Their chests DO count toward Chronokinesis.",
+    "entries": [
+      { "id": "liftal_castle", "name": "Liftal Castle" },
+      { "id": "krisa_manor", "name": "Krisa Manor", "objective": "Collect Ender Eyes" },
+      { "id": "estalis_gallery", "name": "Estalis Gallery", "objective": "Three dragon statues" }
+    ]
+  },
+
+  "gap": "The guide gives difficulty ordering and qualitative chest descriptions but NOT quantified environmental-chest density or challenge-type mix. Chronokinesis scoring is therefore ordinal (Corkus > Molten Heights > rest), not numeric."
+}

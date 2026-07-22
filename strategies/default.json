@@ -1,0 +1,233 @@
+{
+  "id": "default-2-2-1",
+  "name": "Default Flow — Rainbow/Orange Setup",
+  "wynncraftVersion": "2.2.1",
+  "basedOn": "Ultimate Wynncraft Lootrun Guide, Run Setup + Run Combos sections",
+  "confidence": "Beacon orderings are inherited from a pre-2.2.1 snapshot. Every `aqua` position is marked `disputed` pending the additive-boosting measurement.",
+
+  "runConstants": {
+    "startingChallenges": 12,
+    "maxChallenges": 100,
+    "timeCapSeconds": 900,
+    "dailyBonusRefreshTokensPerRun": 3,
+    "dailyBonusValue": { "pulls": 10, "rewardRerolls": 1, "lootrunXp": 100 },
+    "tokenAcquisition": "6 tokens for 4 Shares (currency). Per user: OUT OF SCOPE for the advisor — treat tokens held as a run-setup input, not something the advisor plans toward."
+  },
+
+  "goals": {
+    "runnable": {
+      "all": [
+        { "missionsWithRole": "boon_generator", "gte": 1 },
+        { "missionsWithRole": "pull_generator", "gte": 1 },
+        { "path": "challengesRemaining", "gte": 20 }
+      ],
+      "note": "Weak/random generators (Jester's Trick, Complete Chaos) do not satisfy this alone."
+    }
+  },
+
+  "invariants": {
+    "note": "Checked every challenge, in every phase. Violations outrank phase priority.",
+    "minChallengesRemaining": 4,
+    "idealBeaconChoices": 5,
+    "timeFloorSeconds": 150
+  },
+
+  "safety": [
+    {
+      "id": "timeout-guard",
+      "priority": 1000,
+      "when": { "path": "timeRemaining", "lt": 150 },
+      "prefer": ["green", "red"],
+      "why": "Timeout risk, and GREEN SELF-EXCLUDES — a green you decline is gone next challenge. This is take-now-or-lose-it, not a ranking preference.",
+      "correctedFrom": "Earlier rationale said 'green costs nothing because it returns next challenge' — exactly backwards. Green is one of only two self-excluding beacons (with red), so declining it forfeits it. Aqua and orange are the ones that freely return.",
+      "disabledBy": { "trial": "chronotrigger", "reason": "Cannot gain time for 12 challenges — the guard is INOPERATIVE. Warn loudly instead of recommending green." }
+    },
+    {
+      "id": "challenge-floor",
+      "priority": 900,
+      "when": { "path": "challengesRemaining", "lte": 4 },
+      "prefer": ["red", "white"],
+      "why": "Below the 4-challenge buffer the run ends before any combo can pay off."
+    },
+    {
+      "id": "hubris-warning",
+      "priority": 900,
+      "when": { "flag": "hubris" },
+      "uiWarning": "HUBRIS ACTIVE — /kill or any death ends the run immediately."
+    },
+    {
+      "id": "last-challenge-suppression",
+      "priority": 800,
+      "when": { "path": "challengesRemaining", "eq": 1 },
+      "suppress": ["yellow", "grey", "crimson", "blue", "chronokinesis", "sacrificial_ritual", "gambling_beast"],
+      "stillWorks": ["red", "white", "purple", "darkGrey"],
+      "why": "Confirmed by the guide (Misc. Info): on the final challenge red/white beacons and purple/darkGrey pulls still work, while yellow, grey, crimson and BLUE beacons, plus new curses, Chronokinesis, Sacrificial Ritual and Gambling Beast procs, all do nothing.",
+      "correctedFrom": "Blue was missing from this list — the advisor would have recommended a dead Blue Beacon on the last challenge."
+    }
+  ],
+
+  "phases": [
+    {
+      "id": "opening",
+      "name": "Opening",
+      "when": { "path": "challenge", "lt": 4 },
+      "beaconPriority": ["orange", "aqua", "pink", "red", "blue"],
+      "tiedRanks": [["aqua", "pink"]],
+      "intent": "Buy optionality before anything else. Beacon choices are the input to every later decision.",
+      "escapeHatch": {
+        "rule": "A run can be RESET by failing before challenge 4. Sacrificed pulls are retained; a 15-minute cooldown applies.",
+        "why": "This makes a bad opening cheap to abandon. If the first three challenges produce no orange/aqua/pink and the pool looks hostile, resetting can beat playing out a doomed run — the advisor should offer it as an explicit option, not just rank beacons.",
+        "constraint": "Only available before challenge 4, so the decision window is exactly this phase."
+      },
+      "notes": [
+        "Orange is the safest top pick post-2.2.1: it adds choices and is untouched by the boosting rework.",
+        "DISPUTED: aqua's rank here assumes multiplicative stacking. If additive is broad, aqua likely drops below pink and red."
+      ]
+    },
+    {
+      "id": "mission_gate",
+      "name": "Mission Gate (forced)",
+      "when": { "path": "challenge", "eq": 4 },
+      "forced": true,
+      "offers": { "type": "mission", "choices": 3 },
+      "gate": {
+        "rule": "DO NOT fulfil the mission until a comfortable run extension is secured.",
+        "why": "Committing an archetype before you have the challenges to execute it wastes the slot.",
+        "deferral": "Grey beacons can be skipped roughly 10 times, so deferring is cheap and usually correct."
+      },
+      "missionPolicy": {
+        "method": "archetype_commit",
+        "note": "Only ~3 mission slots exist, so this pick effectively selects the archetype. See data/archetypes.json.",
+        "fallback": "If no archetype core is offered, take a `universal` mission (High Roller / Redemption) — never dead."
+      },
+      "stacking": "Vibrant Aqua -> Vibrant Grey yields 5 mission choices. Worth setting up if the grey can be deferred."
+    },
+    {
+      "id": "extension",
+      "name": "Run Extension",
+      "when": { "all": [ { "path": "challenge", "gte": 4 }, { "path": "challenge", "lt": 10 } ] },
+      "beaconPriority": ["white", "orange", "aqua", "red", "pink", "blue"],
+      "intent": "Convert the 12 starting challenges into a runway long enough for an archetype to pay off.",
+      "targets": [
+        { "combo": ["aqua:vibrant", "white:vibrant"], "payoff": "+30 challenges", "priority": 100, "disputed": true },
+        { "combo": ["aqua:vibrant", "red:vibrant"], "payoff": "+15 challenges", "priority": 60, "constraint": "reds cannot repeat" },
+        { "combo": ["white"], "payoff": "+25 challenges", "priority": 50, "note": "Acceptable unstacked alternative." }
+      ],
+      "maintain": ["Refresh orange whenever offered", "Keep >= 5 beacon choices"]
+    },
+    {
+      "id": "rainbow_window",
+      "name": "Rainbow Window",
+      "when": { "path": "challenge", "gte": 10 },
+      "beaconPriority": ["rainbow", "orange", "aqua", "grey", "pink", "white", "red", "blue"],
+      "hardRule": {
+        "rule": "Take rainbow on sight. Never skip it.",
+        "why": "Rainbow uses a ramping hazard rate after challenge 10 — the chance climbs until it appears, then resets. Skipping forfeits an event you cannot re-roll into cheaply."
+      },
+      "rerollPolicy": {
+        "when": { "path": "beaconChoices", "gte": 4 },
+        "action": "reroll to force orange or rainbow",
+        "note": "2.2.1 makes early forcing weak — at challenge 11 the rainbow hazard is still low. Rerolling for rainbow gets better the longer it has been absent."
+      }
+    },
+    {
+      "id": "trial_prep",
+      "name": "Trial Prep",
+      "when": { "path": "challenge", "eq": 19 },
+      "beaconPriority": ["aqua", "rainbow", "orange"],
+      "intent": "Hold an aqua into challenge 20 — 'aqua boosted crimson beacons are a near must'.",
+      "disputed": true
+    },
+    {
+      "id": "trial_window",
+      "name": "Trial Window",
+      "when": { "path": "challenge", "gte": 20 },
+      "beaconPriority": ["rainbow", "crimson", "orange", "aqua", "grey", "pink"],
+      "crimsonPolicy": {
+        "takeIf": "aqua-boosted",
+        "skipTolerance": 2,
+        "why": "Okay to skip once or twice to set up an aqua stack. Crimson is capped at 2 uses, so quality beats speed."
+      },
+      "trialPreference": {
+        "source": "data/trials.json tierList (guide Trials tab)",
+        "order": ["S", "A", "B", "C"],
+        "S": ["hubris", "ultimate_sacrifice", "chronotrigger", "lights_out"],
+        "neverTake": ["imperitia", "monochromokopia"],
+        "firstTrialRule": "Ultimate Sacrifice is the recommended FIRST trial while mob scaling is still low.",
+        "secondTrialRule": "Gambling Beast should almost always be the SECOND trial — sustain it by stacking vibrant aqua/green. It grants no reroll if the timer cannot absorb the cost.",
+        "note": "Archetype `trialPreference` refines this ordering but must not promote anything in `neverTake`."
+      }
+    },
+    {
+      "id": "mission_completion",
+      "name": "Mission Completion Deadline",
+      "when": { "all": [ { "path": "challenge", "gte": 20 }, { "path": "challenge", "lt": 40 } ] },
+      "deadline": {
+        "rule": "Spend all 3 grey beacons before challenge 40.",
+        "why": "Grey stops appearing around challenge 30-50. An unspent mission slot at 40 is a permanently wasted third of your mission capacity."
+      },
+      "escalation": "Raise grey priority as challenge 40 approaches and unspent slots remain."
+    },
+    {
+      "id": "fork",
+      "name": "Combo Evaluation Fork",
+      "when": { "path": "challenge", "gte": 30 },
+      "decision": {
+        "test": "goals.runnable",
+        "ifTrue": "farm",
+        "ifFalse": "salvage"
+      }
+    },
+    {
+      "id": "farm",
+      "name": "Farm (good combo)",
+      "entryFrom": "fork:true",
+      "intent": "Extend toward challenge 100 and cycle the combo.",
+      "beaconPriority": ["rainbow", "white", "orange", "aqua", "purple", "yellow", "red", "green"],
+      "manage": ["Balance red (challenges) against green (time)", "Sustain boons via aqua-stacked vibrant blue for 400% potency"],
+      "extension": { "combo": ["aqua:vibrant", "white:vibrant"], "payoff": "+30 challenges", "note": "Re-usable to push to 100." }
+    },
+    {
+      "id": "salvage",
+      "name": "Salvage (no combo)",
+      "entryFrom": "fork:false",
+      "intent": "Cash out a failed run rather than limp to the end.",
+      "beaconPriority": ["purple", "darkGrey", "crimson", "rainbow", "orange"],
+      "plan": [
+        "FIRST: try the comboless pull line — Porphyrophobia + Route Indigo yields up to 300+ pulls from an otherwise dead run. Non-terminal, so attempt before any cash-out.",
+        "Other comboless-viable missions: Redemption, High Roller, Requiem, Radiant Hunter, Chronokinesis. Lights Out is the most reliable passive (200+ pulls).",
+        "Stack curses maximally (Madman caps at 8; keep >= 8 active).",
+        "NOTE: Gambling Beast is NOT salvage-only. The guide rates it A tier and 'should almost always be taken as 2nd trial', sustained by stacking vibrant aqua/green. It belongs in the normal trial plan, not just here.",
+        "Alternative cash-out: Treasury Bill for +75% of current pulls — better when the pull bank is already large."
+      ],
+      "ordering": "Non-terminal salvage (Porphyrophobia + Route Indigo, curse stacking) MUST be exhausted before terminal cash-outs (Gambling Beast). A cash-out forecloses the rest of the run; the pull line does not.",
+      "why": "Gambling Beast is only correct here. As a normal pick it is run-ending; as a deliberate cash-out it is the best salvage available."
+    },
+    {
+      "id": "endgame",
+      "name": "Endgame",
+      "when": { "path": "challengesRemaining", "lte": 7 },
+      "beaconPriority": ["red", "purple", "darkGrey", "yellow", "white"],
+      "activates": ["knife_edge"],
+      "notes": [
+        "Knife Edge pays 7 minus challengesRemaining — worthless earlier, strong here.",
+        "Red priority rises: challenges, not time, are now the binding constraint.",
+        "On the final challenge suppress everything in safety.last-challenge-suppression."
+      ]
+    }
+  ],
+
+  "rerollPolicy": {
+    "saveFor": ["rainbow", "orange", "grey", "crimson", "darkGrey"],
+    "uselessAfterChallenge": 40,
+    "note": "Gourmand's rate (+1 or +2 choices per reroll) is DISPUTED and materially changes this policy."
+  },
+
+  "boonPolicy": {
+    "note": "Dynamic boons favour early pickup, static boons favour late. See data/boons.json `kind`.",
+    "preferred": ["killstreak", "madman"],
+    "madmanRule": "Hold 6-8 curses before taking Madman; it snapshots and caps at 8.",
+    "metaNote": "Guide recommends prioritising EHP boons given current meta damage output — a survivability concern the state machine cannot model. Expose as a user preference.",
+    "potencyCeiling": "Aqua-stacked Vibrant Blue yields boons at 400% potency."
+  }
+}
