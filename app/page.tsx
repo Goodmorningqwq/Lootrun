@@ -34,6 +34,7 @@ import missionsJson from '../data/missions.json';
 import trialsJson from '../data/trials.json';
 import boonsJson from '../data/boons.json';
 import { useCurrentRun, useTracker } from './store';
+import { useForecast } from './useForecast';
 
 const MISSIONS = (missionsJson as { missions: Array<{ id: string; name: string; effect: string | null }> })
   .missions.filter((m) => m.effect);
@@ -160,6 +161,15 @@ export default function Tracker() {
 
   const pending = pendingMission(run);
   const missionDue = firstMissionDue(run);
+
+  const { forecast, running: simRunning, error: simError, run: runSim, clear: clearSim } =
+    useForecast();
+  const [secsPerChallenge, setSecsPerChallenge] = useState(120);
+
+  // A forecast is only valid for the offer it was computed from.
+  useEffect(() => {
+    clearSim();
+  }, [offer, run.challengesCompleted, clearSim]);
   const missionAdvice = useMemo(
     () => (missionOffer.length > 0 ? evaluateMissionOffer(run, missionOffer) : null),
     [run, missionOffer],
@@ -468,7 +478,38 @@ export default function Tracker() {
       {/* Advice */}
       {advice && (
         <section className="rounded-xl bg-zinc-900 p-4">
-          <h2 className="mb-3 font-semibold">Advice</h2>
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <h2 className="font-semibold">Advice</h2>
+            <button
+              onClick={() => runSim(run, offer, { secondsPerChallenge: secsPerChallenge })}
+              disabled={simRunning}
+              className="rounded bg-indigo-700 px-3 py-1 text-sm hover:bg-indigo-600 disabled:opacity-50"
+              title="Play this run out hundreds of times per option"
+            >
+              {simRunning ? 'Simulating…' : '🎲 Simulate outcomes'}
+            </button>
+            <label className="flex items-center gap-1.5 text-xs text-zinc-500">
+              sec/challenge
+              <input
+                type="number"
+                value={secsPerChallenge}
+                min={10}
+                max={600}
+                step={10}
+                onChange={(e) => setSecsPerChallenge(Number(e.target.value))}
+                className="w-16 rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-100"
+                title="How long a challenge takes you. Challenges grant +150s total, so under 150 nets time and over 150 drains it. Timeout odds are very sensitive to this."
+              />
+            </label>
+            {forecast && (
+              <span className="text-xs text-zinc-500">
+                {forecast.actions[0]?.runs ?? 0} rollouts/option
+              </span>
+            )}
+          </div>
+          {simError && (
+            <p className="mb-2 text-xs text-red-400">simulation failed: {simError}</p>
+          )}
           <ol className="space-y-2">
             {advice.ranked.map((r, i) => (
               <li
@@ -498,9 +539,53 @@ export default function Tracker() {
                 <ul className="mt-1 space-y-0.5 text-xs text-zinc-400">
                   {r.reasons.map((why) => <li key={why}>• {why}</li>)}
                 </ul>
+                {(() => {
+                  const f = forecast?.actions.find(
+                    (a) => a.color === r.color && a.vibrant === r.vibrant,
+                  );
+                  if (!f) return null;
+                  const isBest = forecast?.best?.color === f.color;
+                  return (
+                    <div
+                      className={`mt-1.5 flex flex-wrap gap-x-4 gap-y-1 rounded border px-2 py-1 text-xs ${
+                        isBest
+                          ? 'border-indigo-600 bg-indigo-950/50 text-indigo-200'
+                          : 'border-zinc-800 bg-zinc-950/50 text-zinc-400'
+                      }`}
+                    >
+                      <span title="Probability the run reaches a runnable state">
+                        P(runnable) <b>{Math.round(f.pRunnable * 100)}%</b>
+                      </span>
+                      <span title="Expected reward pulls by run end">
+                        E[pulls] <b>{f.meanPulls.toFixed(1)}</b>
+                      </span>
+                      <span title="Expected challenges completed">
+                        E[challenges] <b>{f.meanChallenges.toFixed(1)}</b>
+                      </span>
+                      <span
+                        className={f.pTimeout > 0.3 ? 'text-red-400' : undefined}
+                        title="Probability the run ends by running out of time"
+                      >
+                        P(timeout) <b>{Math.round(f.pTimeout * 100)}%</b>
+                      </span>
+                      {isBest && <span className="font-semibold">← best simulated</span>}
+                    </div>
+                  );
+                })()}
               </li>
             ))}
           </ol>
+          {forecast && (
+            <p className="mt-2 text-[11px] text-zinc-600">
+              Simulated by playing the rest of the run out {forecast.actions[0]?.runs} times per
+              option. Compare options against each other — absolutes inherit the offer model,
+              which is estimated rather than measured.{' '}
+              <b className="text-amber-600">
+                E[pulls] currently ignores boons and mission effects
+              </b>
+              , so trust P(runnable) and E[challenges] first.
+            </p>
+          )}
         </section>
       )}
 
