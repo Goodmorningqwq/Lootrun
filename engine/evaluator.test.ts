@@ -6,8 +6,17 @@
 
 import { describe, expect, it } from 'vitest';
 import { createRun } from './engine';
-import { activePhases, evaluateOffer, isRunnable, testCondition } from './evaluator';
+import {
+  activePhases,
+  evaluateMissionOffer,
+  evaluateOffer,
+  isRunnable,
+  testCondition,
+} from './evaluator';
 import type { RunState } from './types';
+
+/** Held missions, all fulfilled — the common case for these scenarios. */
+const slots = (...ids: string[]) => ids.map((id) => ({ id, fulfilled: true }));
 
 /** A run mid-way through, with sensible defaults, overridable per scenario. */
 function runAt(challenge: number, overrides: Partial<RunState> = {}): RunState {
@@ -31,13 +40,13 @@ describe('condition evaluation', () => {
     const bare = runAt(10);
     expect(isRunnable(bare)).toBe(false);
 
-    const equipped = runAt(10, { missions: ['hoarder', 'high_roller'] });
+    const equipped = runAt(10, { missions: slots('hoarder', 'high_roller') });
     expect(isRunnable(equipped)).toBe(true);
   });
 
   it('runnable also requires 20+ challenges remaining', () => {
     const s = runAt(10, {
-      missions: ['hoarder', 'high_roller'],
+      missions: slots('hoarder', 'high_roller'),
       challengesRemaining: 10,
     });
     expect(isRunnable(s)).toBe(false);
@@ -46,11 +55,11 @@ describe('condition evaluation', () => {
   it('weak generators (Jester\'s Trick, Complete Chaos) never satisfy runnable alone', () => {
     // Both carry boon_generator + pull_generator roles, but their effects are
     // random — the data marks them weak, and the goal must ignore them.
-    const s = runAt(10, { missions: ['jesters_trick', 'complete_chaos'] });
+    const s = runAt(10, { missions: slots('jesters_trick', 'complete_chaos') });
     expect(isRunnable(s)).toBe(false);
 
     // A real generator alongside them still counts.
-    const mixed = runAt(10, { missions: ['jesters_trick', 'hoarder', 'high_roller'] });
+    const mixed = runAt(10, { missions: slots('jesters_trick', 'hoarder', 'high_roller') });
     expect(isRunnable(mixed)).toBe(true);
   });
 });
@@ -67,7 +76,7 @@ describe('phase resolution', () => {
   });
 
   it('fork resolves to farm when runnable, salvage when not', () => {
-    const good = activePhases(runAt(35, { missions: ['hoarder', 'high_roller'] }));
+    const good = activePhases(runAt(35, { missions: slots('hoarder', 'high_roller') }));
     expect(good.map((p) => p.id)).toContain('farm');
 
     const bad = activePhases(runAt(35));
@@ -76,9 +85,75 @@ describe('phase resolution', () => {
 
   it('endgame outranks farm when 7 or fewer challenges remain', () => {
     const phases = activePhases(
-      runAt(60, { missions: ['hoarder', 'high_roller'], challengesRemaining: 6 }),
+      runAt(60, { missions: slots('hoarder', 'high_roller'), challengesRemaining: 6 }),
     );
     expect(phases[phases.length - 1]?.id).toBe('endgame');
+  });
+});
+
+describe('mission offer evaluation', () => {
+  it('with no archetype yet, prefers a core that can still be built', () => {
+    const a = evaluateMissionOffer(runAt(4), ['equilibrium', 'stasis', 'high_spirits']);
+    expect(a.committed).toBeNull();
+    expect(a.ranked[0]?.id).toBe('equilibrium');
+    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/Starts/i);
+  });
+
+  it('once committed, ranks that archetype’s core above generic picks', () => {
+    const a = evaluateMissionOffer(
+      runAt(10, { missions: slots('equilibrium') }),
+      ['porphyrophobia', 'high_spirits'],
+    );
+    expect(a.committed?.id).toBe('curse_stack');
+    expect(a.ranked[0]?.id).toBe('porphyrophobia');
+    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/core/i);
+  });
+
+  it('warns when a pick fights the committed archetype', () => {
+    const a = evaluateMissionOffer(
+      runAt(10, { missions: slots('equilibrium', 'porphyrophobia') }),
+      ['cleansing_greed', 'high_roller'],
+    );
+    const cg = a.ranked.find((r) => r.id === 'cleansing_greed');
+    expect(cg?.reasons.join(' ')).toMatch(/Removes the curses/i);
+    expect(a.ranked[0]?.id).toBe('high_roller');
+  });
+
+  it('boosts missions that fill a missing runnable role', () => {
+    const a = evaluateMissionOffer(runAt(6), ['hoarder', 'high_spirits']);
+    expect(a.missingRoles).toContain('boon_generator');
+    expect(a.ranked[0]?.id).toBe('hoarder');
+    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/Fills missing/i);
+  });
+
+  it('weak generators do not count as filling a role', () => {
+    const a = evaluateMissionOffer(runAt(6), ['jesters_trick']);
+    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/does not satisfy runnable/i);
+  });
+
+  it('flags Knife Edge as a trap while challenges remain', () => {
+    const a = evaluateMissionOffer(runAt(10, { challengesRemaining: 40 }), [
+      'knife_edge',
+      'redemption',
+    ]);
+    const ke = a.ranked.find((r) => r.id === 'knife_edge');
+    expect(ke?.reasons.join(' ')).toMatch(/Trap/i);
+    expect(a.ranked[0]?.id).toBe('redemption');
+  });
+
+  it('prefers the stateless pick when only one slot is left', () => {
+    const a = evaluateMissionOffer(
+      runAt(25, { missions: slots('stasis', 'chronokinesis') }),
+      ['high_roller', 'equilibrium'],
+    );
+    expect(a.slotsLeft).toBe(1);
+    expect(a.ranked[0]?.id).toBe('high_roller');
+    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/last slot/i);
+  });
+
+  it('every ranked mission carries a reason', () => {
+    const a = evaluateMissionOffer(runAt(10), ['optimism', 'requiem', 'high_spirits']);
+    for (const r of a.ranked) expect(r.reasons.length).toBeGreaterThan(0);
   });
 });
 
@@ -163,7 +238,7 @@ describe('offer evaluation — hand-checked scenarios', () => {
   });
 
   it('farm: rainbow leads a good run at challenge 35', () => {
-    const advice = evaluateOffer(runAt(35, { missions: ['hoarder', 'high_roller'] }), [
+    const advice = evaluateOffer(runAt(35, { missions: slots('hoarder', 'high_roller') }), [
       { color: 'rainbow' },
       { color: 'purple' },
     ]);

@@ -5,9 +5,13 @@ import {
   createRun,
   die,
   failChallenge,
+  firstMissionDue,
+  fulfilMission,
   gainBoon,
+  pendingMission,
   relabelBoon,
   removeBoon,
+  takeMission,
   useReroll,
   isExcluded,
   isExhausted,
@@ -299,6 +303,75 @@ describe('daily bonus', () => {
     const master = createRun({ rank: 'master' });
     expect(isUnlocked(master, 'crimson')).toBe(false); // rank ok, challenge not
     expect(isUnlocked(advance(master, 20), 'crimson')).toBe(true);
+  });
+});
+
+describe('forced first mission', () => {
+  it('is not due before challenge 4', () => {
+    expect(firstMissionDue(advance(createRun(), 3))).toBe(false);
+  });
+
+  it('fires on completing challenge 4, with no grey beacon involved', () => {
+    expect(firstMissionDue(advance(createRun(), 4))).toBe(true);
+  });
+
+  it('stays due until a mission is actually taken', () => {
+    expect(firstMissionDue(advance(createRun(), 9))).toBe(true);
+  });
+
+  it('clears once the first mission is taken', () => {
+    const s = takeMission(advance(createRun(), 4), 'hoarder');
+    expect(firstMissionDue(s)).toBe(false);
+  });
+
+  it('does not require grey to be available — it is forced, not offered', () => {
+    // Grey's own window opens at 4 too, but the forced pick is independent:
+    // it stays due even while grey is blocked by a pending mission elsewhere.
+    const s = advance(createRun(), 4);
+    expect(firstMissionDue(s)).toBe(true);
+    expect(takeMission(s, 'high_roller').missions).toHaveLength(1);
+  });
+});
+
+describe('mission slots and grey blocking', () => {
+  const atGrey = () => advance(createRun(), 4);
+
+  it('a taken mission starts unfulfilled', () => {
+    const s = takeMission(atGrey(), 'hoarder');
+    expect(s.missions).toEqual([{ id: 'hoarder', fulfilled: false }]);
+    expect(pendingMission(s)?.id).toBe('hoarder');
+  });
+
+  it('grey is blocked while a mission is processing', () => {
+    const s = takeMission(atGrey(), 'hoarder');
+    expect(isUnlocked(s, 'grey')).toBe(false);
+    expect(legalColors(s)).not.toContain('grey');
+    expect(() => takeBeacon(s, { color: 'grey' })).toThrow(IllegalMoveError);
+  });
+
+  it('fulfilling the mission frees grey again', () => {
+    let s = takeMission(atGrey(), 'hoarder');
+    s = fulfilMission(s, 'hoarder');
+    expect(pendingMission(s)).toBeUndefined();
+    expect(isUnlocked(s, 'grey')).toBe(true);
+  });
+
+  it('refuses a second mission while one is processing', () => {
+    const s = takeMission(atGrey(), 'hoarder');
+    expect(() => takeMission(s, 'high_roller')).toThrow(IllegalMoveError);
+  });
+
+  it('allows the next mission once the previous is fulfilled', () => {
+    let s = takeMission(atGrey(), 'hoarder');
+    s = fulfilMission(s, 'hoarder');
+    s = takeMission(s, 'high_roller');
+    expect(s.missions.map((m) => m.id)).toEqual(['hoarder', 'high_roller']);
+  });
+
+  it('refuses a duplicate mission', () => {
+    let s = takeMission(atGrey(), 'hoarder');
+    s = fulfilMission(s, 'hoarder');
+    expect(() => takeMission(s, 'hoarder')).toThrow(IllegalMoveError);
   });
 });
 

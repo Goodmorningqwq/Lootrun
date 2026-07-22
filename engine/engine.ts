@@ -7,6 +7,7 @@ import {
   BEACON_COLORS,
   MAX_TIER,
   type BeaconColor,
+  type MissionSlot,
   type OfferedBeacon,
   type RunState,
   type Tier,
@@ -113,9 +114,25 @@ export function isExhausted(state: RunState, color: BeaconColor): boolean {
   return max !== undefined && uses(state, color) >= max;
 }
 
+/** A mission taken but not yet fulfilled — blocks further grey beacons. */
+export const pendingMission = (s: RunState): MissionSlot | undefined =>
+  s.missions.find((m) => !m.fulfilled);
+
+/**
+ * The first mission is FORCED: completing challenge 4 offers a 3-way mission
+ * choice automatically, with no grey beacon involved. Until it is taken the
+ * run is effectively paused on that decision, so the UI must demand it rather
+ * than wait for the player to open a picker.
+ */
+export const firstMissionDue = (s: RunState): boolean =>
+  s.challengesCompleted >= C.firstMissionAtChallenge && s.missions.length === 0;
+
 /** Is this colour inside its availability window AND unlocked by rank? */
 export function isUnlocked(state: RunState, color: BeaconColor): boolean {
   if (rankIndex(state.rank) < BEACON_MIN_RANK[color]) return false;
+  // Only one mission processes at a time: grey will not reappear while a
+  // mission is still being fulfilled.
+  if (color === 'grey' && pendingMission(state)) return false;
   const w = AVAILABILITY[color];
   if (!w) return true;
   const n = state.challengesCompleted;
@@ -346,6 +363,29 @@ export function gainBoon(
 
 export function removeBoon(state: RunState, index: number): RunState {
   return { ...state, boons: state.boons.filter((_, i) => i !== index) };
+}
+
+/** Take a mission from a grey beacon. It starts unfulfilled. */
+export function takeMission(state: RunState, id: string): RunState {
+  if (pendingMission(state)) {
+    throw new IllegalMoveError('a mission is already processing');
+  }
+  if (state.missions.some((m) => m.id === id)) {
+    throw new IllegalMoveError(`${id} is already held`);
+  }
+  return { ...state, missions: [...state.missions, { id, fulfilled: false }] };
+}
+
+/** Mark a mission fulfilled, which frees grey beacons to appear again. */
+export function fulfilMission(state: RunState, id: string): RunState {
+  return {
+    ...state,
+    missions: state.missions.map((m) => (m.id === id ? { ...m, fulfilled: true } : m)),
+  };
+}
+
+export function removeMission(state: RunState, id: string): RunState {
+  return { ...state, missions: state.missions.filter((m) => m.id !== id) };
 }
 
 export function relabelBoon(state: RunState, index: number, id: string): RunState {

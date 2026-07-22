@@ -16,13 +16,15 @@ import {
   recordOffer,
   relabelBoon,
   removeBoon,
+  removeMission,
   resolveTier,
   startChallenge,
   takeBeacon,
+  takeMission,
   useReroll,
 } from '../engine/engine';
 import { BEACONS } from '../engine/data';
-import type { BeaconColor, OfferedBeacon, RunState } from '../engine/types';
+import type { BeaconColor, MissionSlot, OfferedBeacon, RunState } from '../engine/types';
 
 /** Trials whose penalty maps onto an engine behaviour flag. */
 const TRIAL_FLAGS: Partial<Record<string, keyof RunState['flags']>> = {
@@ -57,8 +59,14 @@ interface TrackerStore {
   removeBoonAt: (index: number) => void;
   labelBoon: (index: number, id: string) => void;
 
+  /** Missions offered by a grey beacon, awaiting a pick. */
+  missionOffer: string[];
+  setMissionOffer: (ids: string[]) => void;
+  toggleMissionOffer: (id: string) => void;
+  takeMissionFromOffer: (id: string) => void;
   addMission: (id: string) => void;
-  removeMission: (id: string) => void;
+  dropMission: (id: string) => void;
+  toggleFulfilled: (id: string) => void;
   addTrial: (id: string) => void;
   removeTrial: (id: string) => void;
   setFlag: (flag: keyof RunState['flags'], value: boolean) => void;
@@ -155,7 +163,7 @@ export const useTracker = create<TrackerStore>()(
     },
 
     reroll: () => {
-      const hasGourmand = current(get().history).missions.includes('gourmand');
+      const hasGourmand = current(get().history).missions.some((m) => m.id === 'gourmand');
       tryPush((s) => useReroll(s, hasGourmand));
     },
 
@@ -170,13 +178,30 @@ export const useTracker = create<TrackerStore>()(
 
     labelBoon: (index, id) => tryPush((s) => relabelBoon(s, index, id)),
 
-    addMission: (id) =>
-      tryPush((s) =>
-        s.missions.includes(id) ? s : { ...s, missions: [...s.missions, id] },
-      ),
+    missionOffer: [],
 
-    removeMission: (id) =>
-      tryPush((s) => ({ ...s, missions: s.missions.filter((m) => m !== id) })),
+    setMissionOffer: (ids) => set({ missionOffer: ids }),
+
+    toggleMissionOffer: (id) =>
+      set((s) => ({
+        missionOffer: s.missionOffer.includes(id)
+          ? s.missionOffer.filter((m) => m !== id)
+          : [...s.missionOffer, id],
+      })),
+
+    takeMissionFromOffer: (id) => tryPush((s) => takeMission(s, id), { missionOffer: [] }),
+
+    addMission: (id) => tryPush((s) => takeMission(s, id)),
+
+    dropMission: (id) => tryPush((s) => removeMission(s, id)),
+
+    toggleFulfilled: (id) =>
+      tryPush((s) => ({
+        ...s,
+        missions: s.missions.map((m) =>
+          m.id === id ? { ...m, fulfilled: !m.fulfilled } : m,
+        ),
+      })),
 
     addTrial: (id) =>
       tryPush((s) => {
@@ -215,10 +240,13 @@ export const useTracker = create<TrackerStore>()(
       name: 'lootrun-advisor-run-v1',
       // v2: RunState gained `rank`. Old persisted runs must be migrated, not
       // discarded — losing the run is exactly what persistence exists to stop.
-      // v2: added `rank`. v3: added `dailyBonus` / `silverbull`.
-      version: 3,
+      // v2: `rank`. v3: `dailyBonus`/`silverbull`. v4: missions became slots.
+      version: 4,
       migrate: (persisted, version) => {
-        const p = persisted as { history?: RunState[]; offer?: OfferedBeacon[] };
+        const p = persisted as {
+          history?: Array<RunState & { missions: Array<string | MissionSlot> }>;
+          offer?: OfferedBeacon[];
+        };
         if (Array.isArray(p?.history)) {
           p.history = p.history.map((s) => ({
             ...s,
@@ -227,6 +255,11 @@ export const useTracker = create<TrackerStore>()(
             // already reflect whatever the player had — don't retro-add it.
             dailyBonus: s.dailyBonus ?? (version >= 3),
             silverbull: s.silverbull ?? false,
+            // v3 stored bare ids. Treat them as fulfilled: they were held
+            // without blocking grey, which is what fulfilled means.
+            missions: (s.missions ?? []).map((m) =>
+              typeof m === 'string' ? { id: m, fulfilled: true } : m,
+            ),
           }));
         }
         return p;

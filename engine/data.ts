@@ -185,6 +185,16 @@ export const RUN_CONSTANTS = {
   startingBeaconRerolls: 2,
   /** A run can be reset by failing before this challenge; 15 min cooldown. */
   resetBeforeChallenge: 4,
+  /** Completing this challenge FORCES a 3-way mission choice — no grey needed. */
+  firstMissionAtChallenge: 4,
+  /**
+   * Total mission slots per run.
+   * UNVERIFIED: grey has maxUses 3, and the challenge-4 mission is forced
+   * rather than coming from a grey. If that forced pick does NOT consume a
+   * grey use, the true total is 4. Set to 3 pending in-game confirmation —
+   * see OPEN-QUESTIONS.md.
+   */
+  maxMissions: 3,
   /** Gourmand: +2 choices per beacon reroll used (confirmed 2026-07-21). */
   gourmandChoicesPerReroll: 2,
 } as const;

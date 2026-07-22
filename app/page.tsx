@@ -10,15 +10,18 @@ import { useEffect, useMemo, useState } from 'react';
 import { BEACON_COLORS, type BeaconColor, type OrangeStack, type Tier } from '../engine/types';
 import {
   beaconChoices,
+  firstMissionDue,
   isExcluded,
   isExhausted,
   isUnlocked,
+  pendingMission,
   resolveTier,
 } from '../engine/engine';
-import { activePhases, evaluateOffer } from '../engine/evaluator';
+import { activePhases, evaluateMissionOffer, evaluateOffer } from '../engine/evaluator';
 import {
   BEACONS,
   RANKS,
+  RUN_CONSTANTS,
   baseChoicesFor,
   boonChoicesFor,
   dailyRewardRerollFor,
@@ -148,10 +151,19 @@ export default function Tracker() {
   const {
     offer, toggleOffer, toggleVibrant, clearOffer, take, reroll,
     markDeath, markFailedChallenge, undo, reset, lastError,
-    addMission, removeMission, addTrial, removeTrial, adjustTime,
+    addTrial, removeTrial, adjustTime,
     addBoon, removeBoonAt, labelBoon, setRunSetup,
+    missionOffer, setMissionOffer, toggleMissionOffer, takeMissionFromOffer,
+    dropMission, toggleFulfilled,
   } = useTracker();
   const [showPerks, setShowPerks] = useState(false);
+
+  const pending = pendingMission(run);
+  const missionDue = firstMissionDue(run);
+  const missionAdvice = useMemo(
+    () => (missionOffer.length > 0 ? evaluateMissionOffer(run, missionOffer) : null),
+    [run, missionOffer],
+  );
 
   const advice = useMemo(
     () => (offer.length > 0 ? evaluateOffer(run, offer) : null),
@@ -334,6 +346,24 @@ export default function Tracker() {
         )}
       </div>
 
+      {/* Forced first mission — blocks the run until picked */}
+      {missionDue && (
+        <div className="rounded-lg border-2 border-amber-500 bg-amber-950/60 px-4 py-3">
+          <p className="font-semibold text-amber-100">
+            🎯 Forced mission choice — challenge {run.challengesCompleted} complete
+          </p>
+          <p className="mt-0.5 text-sm text-amber-200/80">
+            The first mission is offered automatically, not from a grey beacon. Enter the 3
+            missions you were shown in the Missions panel below and the advisor will rank them.
+          </p>
+          <p className="mt-1 text-xs text-amber-300/70">
+            With ~{missionAdvice?.slotsLeft ?? RUN_CONSTANTS.maxMissions} slots in a run, this
+            pick largely commits your archetype — but the guide advises not to{' '}
+            <em>fulfil</em> it until run extension is secure.
+          </p>
+        </div>
+      )}
+
       {/* Orange duration breakdown */}
       {run.orangeStacks.length > 0 && (
         <div className="rounded-lg border border-orange-900 bg-orange-950/40 px-3 py-2 text-sm text-orange-200">
@@ -378,6 +408,7 @@ export default function Tracker() {
                 disabled={illegal && !inOffer}
                 title={
                   isExhausted(run, c) ? 'use cap reached'
+                  : c === 'grey' && pending ? 'blocked — a mission is still processing'
                   : !isUnlocked(run, c) ? 'not available at this challenge'
                   : isExcluded(run, c) ? 'excluded — was offered last challenge'
                   : BEACONS[c].name
@@ -547,28 +578,113 @@ export default function Tracker() {
       {/* Missions & trials */}
       <section className="grid gap-4 md:grid-cols-2">
         <div className="rounded-xl bg-zinc-900 p-4">
-          <h2 className="mb-2 font-semibold">Missions ({run.missions.length}/3)</h2>
+          <h2 className="mb-1 font-semibold">Missions ({run.missions.length}/3)</h2>
+          {pending && (
+            <p className="mb-2 text-xs text-amber-400">
+              ⏳ {MISSIONS.find((m) => m.id === pending.id)?.name} is still processing —
+              grey beacons will not reappear until it is fulfilled.
+            </p>
+          )}
           <div className="mb-2 flex flex-wrap gap-1.5">
-            {run.missions.map((id) => (
-              <button key={id} onClick={() => removeMission(id)}
-                className="rounded bg-zinc-700 px-2 py-1 text-xs hover:bg-red-900"
-                title="click to remove">
-                {MISSIONS.find((m) => m.id === id)?.name ?? id} ✕
-              </button>
+            {run.missions.map((m) => (
+              <span
+                key={m.id}
+                className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs ${
+                  m.fulfilled ? 'bg-zinc-700' : 'bg-amber-900/70 ring-1 ring-amber-600'
+                }`}
+              >
+                <label className="flex cursor-pointer items-center gap-1" title="fulfilled?">
+                  <input
+                    type="checkbox"
+                    checked={m.fulfilled}
+                    onChange={() => toggleFulfilled(m.id)}
+                  />
+                  {MISSIONS.find((x) => x.id === m.id)?.name ?? m.id}
+                </label>
+                <button onClick={() => dropMission(m.id)} className="hover:text-red-400"
+                  title="remove">✕</button>
+              </span>
             ))}
+            {run.missions.length === 0 && (
+              <span className="text-xs text-zinc-600">none yet</span>
+            )}
           </div>
-          <select
-            className="w-full rounded bg-zinc-800 p-2 text-sm"
-            value=""
-            onChange={(e) => e.target.value && addMission(e.target.value)}
-          >
-            <option value="">+ add mission…</option>
-            {MISSIONS.filter((m) => !run.missions.includes(m.id)).map((m) => (
-              <option key={m.id} value={m.id} title={m.effect ?? ''}>
-                {m.name}
-              </option>
-            ))}
-          </select>
+
+          {/* Mission offer — picker stays open so all 3 can be entered */}
+          <details open={missionOffer.length > 0 || missionDue} className="mb-2">
+            <summary
+              className={`cursor-pointer text-xs ${
+                missionDue ? 'font-semibold text-amber-400' : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              {missionDue
+                ? `⚠ forced mission choice — select the 3 offered (${missionOffer.length} entered)`
+                : pending
+                  ? 'mission processing — no grey offers'
+                  : `grey beacon? select the offered missions (${missionOffer.length} entered)`}
+            </summary>
+            <div className="mt-2 flex flex-wrap gap-1">
+              {MISSIONS.filter((m) => !run.missions.some((h) => h.id === m.id)).map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => toggleMissionOffer(m.id)}
+                  title={m.effect ?? ''}
+                  className={`rounded px-1.5 py-0.5 text-[11px] ${
+                    missionOffer.includes(m.id)
+                      ? 'bg-cyan-800 text-cyan-100 ring-1 ring-cyan-400'
+                      : 'bg-zinc-800 hover:bg-zinc-700'
+                  }`}
+                >
+                  {m.name}
+                </button>
+              ))}
+            </div>
+          </details>
+
+          {missionOffer.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs uppercase tracking-wide text-zinc-500">
+                  Grey beacon — pick one
+                </span>
+                <button onClick={() => setMissionOffer([])}
+                  className="text-xs text-zinc-500 hover:text-zinc-300">clear</button>
+              </div>
+              {missionAdvice?.committed && (
+                <p className="text-xs text-cyan-300">
+                  Committed: {missionAdvice.committed.name} ({missionAdvice.committed.progress})
+                </p>
+              )}
+              {missionAdvice && missionAdvice.missingRoles.length > 0 && (
+                <p className="text-xs text-amber-400">
+                  Still missing: {missionAdvice.missingRoles.join(', ')}
+                </p>
+              )}
+              <ol className="space-y-1.5">
+                {missionAdvice?.ranked.map((r, i) => (
+                  <li key={r.id}
+                    className={`rounded-lg border p-2 ${
+                      i === 0 ? 'border-green-700 bg-green-950/40' : 'border-zinc-800'
+                    }`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold">#{i + 1} {r.name}</span>
+                      <span className="text-[11px] text-zinc-500">score {r.score}</span>
+                      <button
+                        onClick={() => takeMissionFromOffer(r.id)}
+                        className="ml-auto rounded bg-green-700 px-2 py-0.5 text-xs hover:bg-green-600"
+                      >
+                        Take
+                      </button>
+                    </div>
+                    <p className="mt-0.5 text-[11px] text-zinc-500">{r.effect}</p>
+                    <ul className="mt-1 space-y-0.5 text-[11px] text-zinc-400">
+                      {r.reasons.map((why) => <li key={why}>• {why}</li>)}
+                    </ul>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
         </div>
 
         <div className="rounded-xl bg-zinc-900 p-4">

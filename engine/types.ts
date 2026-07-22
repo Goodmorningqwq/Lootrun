@@ -36,6 +36,17 @@ export interface OfferedBeacon {
  */
 export type CurseType = 'generic' | 'radiance';
 
+/**
+ * A mission slot. `fulfilled: false` means it is still processing — which
+ * blocks grey beacons from being offered until it completes. The guide's
+ * "do NOT fulfil the mission until run extension is secure" is exactly a
+ * decision about when to flip this.
+ */
+export interface MissionSlot {
+  id: string;
+  fulfilled: boolean;
+}
+
 /** One orange beacon's contribution, with its own expiry. */
 export interface OrangeStack {
   /** Extra beacon choices this orange grants. */
@@ -92,7 +103,11 @@ export interface RunState {
 
   curses: Record<CurseType, number>;
   boons: HeldBoon[];
-  missions: string[];
+  /**
+   * Mission slots in pick order. A mission taken from a grey beacon must be
+   * FULFILLED before another grey is offered — only one processes at a time.
+   */
+  missions: MissionSlot[];
   trials: string[];
 
   /** Tier boost banked from an aqua, applied to the next beacon taken. */

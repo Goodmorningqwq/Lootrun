@@ -23,17 +23,25 @@ This matters for Hoarder (6 flying), Cleansing Greed (flying) and Chronokinesis 
 ### 3. Curse type breakdown
 *(partially answered)* Curses are shown exactly per challenge, so they ARE readable. Still unknown whether the non-Radiance types are individually named. Engine models `generic` + `radiance`; expand if needed.
 
-### 4. Camp selection is now a required run-setup input 🆕
+### 4. How many mission slots does a run actually have? 🆕
+
+The challenge-4 mission is **forced** — offered automatically, not from a grey beacon (user, 2026-07-22). Grey separately has `maxUses: 3`. So the total is either:
+
+- **3** — the forced pick consumes one of grey's three uses, or
+- **4** — the forced pick is free and three greys follow
+
+Engine assumes **3** (`RUN_CONSTANTS.maxMissions`), which drives `slotsLeft` and therefore the "take the stateless pick on the last slot" advice. If it is really 4, the advisor turns conservative one pick too early.
+
+**Test:** take the forced mission at challenge 4, then count how many grey beacons still appear before challenge 30.
+
+### 5. Camp selection is now a required run-setup input 🆕
 
 Guide footnote (2.) makes Chronokinesis **camp-dependent**: only environmental chests and Spelunk-challenge chests count, so its value scales with a camp's chest density and challenge-type mix. Corkus is best (many multi-chest spelunks + dense environmental chests), Molten Heights second.
 
 **Needed:** per-camp challenge-type mix and rough environmental-chest density. Without it Chronokinesis cannot be scored, and the `speedrun`/`chronotrigger` archetypes inherit the uncertainty. The guide has a **Lootrun Camps** tab that may cover this.
 
-### 5. Lower White tiers
+### 6. Lower White tiers
 Tier 3 = +30 challenges confirmed. Tiers 0–2 unmeasured. Minor — the strategy targets max-power White anyway.
-
-### 5. Vibrant orange duration
-Engine uses `6 + tier` challenges, inferred from the user's worked example (5 choices → 4 after five challenges). Fits the one data point available but isn't independently confirmed.
 
 ---
 
@@ -49,6 +57,17 @@ Engine uses `6 + tier` challenges, inferred from the user's worked example (5 ch
 | **Thrill Seeker** | Does green still reset it? | **Yes**, the reset survived the 2.2.1 rework. Green-vs-Thrill-Seeker conflict rule stands. |
 | **Chronokinesis scope** | All chests or non-flying? | **Non-flying only** (wiki right, guide wrong). So it does *not* combo with `flying_chest` — Materialism won't feed it. |
 | **Cleansing Ritual** | Does it exist? | **No** — renamed to Sacrificial Ritual *and* reworked. Old cleanser effect is gone entirely. |
+
+## Resolved 2026-07-22
+
+| # | Question | Answer |
+| --- | --- | --- |
+| **Orange durations** | How long does each tier last? | **5 / 10 / 15 / 25** challenges. Bonus is always +1; tier scales duration only. Note the +10 jump at tier 3 — not a linear ladder. |
+| **Base beacon choices** | 2 or 3 at Grandmaster? | **3.** Sentinel II's "+1 default" runs 2 → 3. This resolved the orange worked example, which only computes to 5 offered beacons with a base of 3. |
+| **Rank perks** | Anything beyond beacon unlocks? | Yes — starting rerolls, base beacon *and* boon choices, vibrancy %, interlude walk speed, and the daily bonus's reward reroll (gated at Elite II, doubled by Silverbull). Grandmaster itself grants nothing. |
+| **Chronotrigger cleanse** | 7.5% or 10%? | **7.5% cleanse, 5% max pull boost** — guide right on the first, changelog right on the second. |
+| **Mission activation** | Can you hold two at once? | **No.** One mission processes at a time; grey will not reappear until the current one is fulfilled. |
+| **First mission** | Grey beacon or automatic? | **Forced** on completing challenge 4, with no grey involved. |
 
 ### Curses are not a player cost
 

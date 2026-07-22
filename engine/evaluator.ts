@@ -12,8 +12,10 @@
 
 import strategyJson from '../strategies/default.json';
 import missionsJson from '../data/missions.json';
+import archetypesJson from '../data/archetypes.json';
 import type { BeaconColor, OfferedBeacon, RunState } from './types';
 import { beaconChoices } from './engine';
+import { RUN_CONSTANTS } from './data';
 
 /* ------------------------------------------------------------------ */
 /* Strategy file types (only the structured parts the evaluator reads) */
@@ -66,18 +68,41 @@ interface Strategy {
 
 const strategy = strategyJson as unknown as Strategy;
 
-const missionFile = missionsJson as unknown as {
-  missions: Array<{ id: string; roles?: string[]; strength?: string }>;
-};
+interface MissionSpec {
+  id: string;
+  name: string;
+  effect?: string | null;
+  roles?: string[];
+  strength?: string;
+  archetypes?: string[];
+  notes?: string;
+}
 
+const missionFile = missionsJson as unknown as { missions: MissionSpec[] };
+
+export const MISSIONS: Record<string, MissionSpec> = {};
 const MISSION_ROLES: Record<string, string[]> = {};
 /** Random-effect missions (Jester's Trick, Complete Chaos) fill roles too
  *  unreliably to count toward goals like `runnable` on their own. */
 const WEAK_MISSIONS = new Set<string>();
 for (const m of missionFile.missions) {
+  if (!m.effect) continue; // skip placeholders
+  MISSIONS[m.id] = m;
   MISSION_ROLES[m.id] = m.roles ?? [];
   if (m.strength === 'weak') WEAK_MISSIONS.add(m.id);
 }
+
+interface Archetype {
+  id: string;
+  name: string;
+  core: string[];
+  enablers?: string[];
+  followups?: string[][];
+  conflicts?: string[];
+  notes?: string;
+}
+
+const ARCHETYPES = (archetypesJson as unknown as { archetypes: Archetype[] }).archetypes;
 
 /* ------------------------------------------------------------------ */
 /* Condition evaluation                                                */
@@ -114,15 +139,19 @@ export function testCondition(state: RunState, cond: Condition): boolean {
   if (cond.any) return cond.any.some((c) => testCondition(state, c));
   if (cond.flag !== undefined) {
     const flags = state.flags as unknown as Record<string, boolean>;
-    return flags[cond.flag] === true || state.trials.includes(cond.flag);
+    return (
+      flags[cond.flag] === true ||
+      state.trials.includes(cond.flag) ||
+      state.missions.some((m) => m.id === cond.flag)
+    );
   }
   if (cond.missionsWithRole !== undefined) {
     // Weak (random-effect) missions never count toward role goals — holding
     // only Jester's Trick must not make a run "runnable".
     const count = state.missions.filter(
       (m) =>
-        !WEAK_MISSIONS.has(m) &&
-        (MISSION_ROLES[m] ?? []).includes(cond.missionsWithRole as string),
+        !WEAK_MISSIONS.has(m.id) &&
+        (MISSION_ROLES[m.id] ?? []).includes(cond.missionsWithRole as string),
     ).length;
     return compare(count, cond);
   }
@@ -185,6 +214,174 @@ export interface Advice {
 }
 
 const SUPPRESSED_SCORE = -100;
+
+/* ------------------------------------------------------------------ */
+/* Mission offers                                                      */
+/* ------------------------------------------------------------------ */
+
+export interface RankedMission {
+  id: string;
+  name: string;
+  effect: string;
+  score: number;
+  reasons: string[];
+}
+
+export interface MissionAdvice {
+  /** Archetype the run has committed to, if any. */
+  committed: { id: string; name: string; progress: string } | null;
+  /** Roles the `runnable` goal still needs. */
+  missingRoles: string[];
+  slotsLeft: number;
+  ranked: RankedMission[];
+}
+
+/** Roles the runnable goal requires, read from the strategy. */
+function requiredRoles(): string[] {
+  const all = strategy.goals.runnable.all ?? [];
+  return all.map((c) => c.missionsWithRole).filter((r): r is string => !!r);
+}
+
+/**
+ * Rank a mission offer.
+ *
+ * The core idea: with only ~3 mission slots, the first pick largely commits
+ * the run to an archetype, so scoring is "how well does this fit the plan we
+ * are already on — or could still start" rather than a flat tier list.
+ */
+export function evaluateMissionOffer(state: RunState, offered: string[]): MissionAdvice {
+  const held = state.missions.map((m) => m.id);
+  const heldSet = new Set(held);
+
+  // Which archetype are we on? Best fit by cores already held.
+  let best: { a: Archetype; hits: number } | null = null;
+  for (const a of ARCHETYPES) {
+    if (a.id === 'universal') continue;
+    const hits = a.core.filter((c) => heldSet.has(c)).length;
+    if (hits > 0 && (!best || hits > best.hits)) best = { a, hits };
+  }
+
+  const missing = requiredRoles().filter(
+    (role) =>
+      !held.some((id) => !WEAK_MISSIONS.has(id) && (MISSION_ROLES[id] ?? []).includes(role)),
+  );
+
+  const slotsLeft = Math.max(0, RUN_CONSTANTS.maxMissions - state.missions.length);
+
+  const ranked: RankedMission[] = offered.map((id) => {
+    const spec = MISSIONS[id];
+    const reasons: string[] = [];
+    let score = 0;
+
+    if (!spec) {
+      return { id, name: id, effect: 'unknown mission', score: 0, reasons: ['not in dataset'] };
+    }
+
+    // --- archetype fit -------------------------------------------------
+    if (best) {
+      const { a } = best;
+      if (a.core.includes(id)) {
+        score += 100;
+        reasons.push(`Completes the ${a.name} core`);
+      } else if (a.enablers?.includes(id)) {
+        score += 70;
+        reasons.push(`Enabler for ${a.name}`);
+      } else {
+        const tier = (a.followups ?? []).findIndex((t) => t.includes(id));
+        if (tier >= 0) {
+          score += 60 - tier * 12;
+          reasons.push(`${a.name} follow-up, tier ${tier + 1}`);
+        }
+      }
+      if (a.conflicts?.includes(id)) {
+        score -= 60;
+        reasons.push(`⚠ Conflicts with ${a.name}`);
+      }
+    } else {
+      // Nothing committed yet — a core is a speculative but real plan.
+      const starts = ARCHETYPES.filter((a) => a.id !== 'universal' && a.core.includes(id));
+      if (starts.length > 0) {
+        // Worth the gamble only if slots remain to finish the archetype.
+        score += slotsLeft >= 2 ? 70 : 30;
+        reasons.push(
+          slotsLeft >= 2
+            ? `Starts ${starts.map((a) => a.name).join(' / ')} — ${slotsLeft} slots left to build it`
+            : `Starts ${starts[0]?.name}, but only ${slotsLeft} slot left to finish it`,
+        );
+      }
+    }
+
+    // --- universal value ----------------------------------------------
+    const universal = ARCHETYPES.find((a) => a.id === 'universal');
+    if (universal?.core.includes(id)) {
+      const bonus = slotsLeft <= 1 ? 75 : 45;
+      score += bonus;
+      reasons.push(
+        slotsLeft <= 1
+          ? 'Stateless and never dead — the safe pick on the last slot'
+          : 'Stateless value, fits any archetype',
+      );
+    }
+
+    // --- unmet goal roles ----------------------------------------------
+    const fills = (spec.roles ?? []).filter((r) => missing.includes(r));
+    if (fills.length > 0) {
+      if (WEAK_MISSIONS.has(id)) {
+        score += 10;
+        reasons.push(`Nominally ${fills.join('/')}, but random — does not satisfy runnable`);
+      } else {
+        score += 55 * fills.length;
+        reasons.push(`Fills missing ${fills.join(' + ')} for a runnable run`);
+      }
+    }
+
+    // --- state-dependent traps ------------------------------------------
+    if (id === 'knife_edge' && state.challengesRemaining > 7) {
+      score -= 80;
+      reasons.push(
+        `⚠ Trap: pays 7 minus challenges remaining — worth 0 at ${state.challengesRemaining} left`,
+      );
+    }
+    if (id === 'chronokinesis' && state.timeRemaining < 300) {
+      score -= 50;
+      reasons.push('⚠ Drains the timer, and time is already short');
+    }
+    if (id === 'sacrificial_ritual' && heldSet.has('knife_edge')) {
+      score -= 50;
+      reasons.push('⚠ Adds challenges, which directly reduces Knife Edge');
+    }
+    if (id === 'cleansing_greed' && best?.a.id === 'curse_stack') {
+      score -= 40;
+      reasons.push('⚠ Removes the curses this run is built on');
+    }
+    if (id === 'gourmand' && state.beaconRerolls === 0) {
+      score -= 25;
+      reasons.push('⚠ No rerolls banked — needs a reroll income to do anything');
+    }
+    if (id === 'kings_court') {
+      score -= 20;
+      reasons.push('Costs a mission slot to gain a trial — charge it the slot');
+    }
+
+    if (reasons.length === 0) reasons.push('No archetype fit or role gap — neutral');
+    return { id, name: spec.name, effect: spec.effect ?? '', score, reasons };
+  });
+
+  ranked.sort((a, b) => b.score - a.score);
+
+  return {
+    committed: best
+      ? {
+          id: best.a.id,
+          name: best.a.name,
+          progress: `${best.hits}/${best.a.core.length} core`,
+        }
+      : null,
+    missingRoles: missing,
+    slotsLeft,
+    ranked,
+  };
+}
 
 export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
   const matched = activePhases(state);
