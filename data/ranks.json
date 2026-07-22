@@ -43,7 +43,7 @@
       "xpRequired": 190,
       "beaconChoices": 1,
       "boonChoices": 1,
-      "note": "Both defaults. Confirmed bases at high rank are 2 beacon choices and 4 boon choices, so below this rank they are 1 and 3."
+      "note": "Both defaults. Beacon choices go 2 -> 3 here (user-confirmed 2026-07-22: Grandmaster starts at 3, which also matches their orange example of 3 base + 1 + 1 = 5 offered). Boon choices go 3 -> 4, matching the Beacon List's '4 boon choices' as the high-rank figure."
     },
     { "id": "sentinel_3", "name": "Sentinel III", "xpRequired": 240, "unlocksBeacon": "white" },
     { "id": "elite_1", "name": "Elite I", "xpRequired": 300, "unlocksBeacon": "grey" },

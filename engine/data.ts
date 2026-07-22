@@ -124,8 +124,12 @@ function accumulate(
 
 export const startingRerollsFor = (rankId: string) => accumulate(rankId, 'beaconRerolls');
 export const vibrancyChanceFor = (rankId: string) => accumulate(rankId, 'vibrancyChance');
-/** Confirmed base of 2 at high rank; the Sentinel II '+1 default' implies 1 below. */
-export const baseChoicesFor = (rankId: string) => 1 + accumulate(rankId, 'beaconChoices');
+/**
+ * Base beacon choices: 2 below Sentinel II, 3 at or above.
+ * Confirmed by user 2026-07-22 (Grandmaster starts at 3), which also
+ * reconciles their orange worked example: 3 base + 1 + 1 = 5 offered.
+ */
+export const baseChoicesFor = (rankId: string) => 2 + accumulate(rankId, 'beaconChoices');
 /** Blue offers 4 boon choices at high rank; Sentinel II's '+1' implies 3 below. */
 export const boonChoicesFor = (rankId: string) => 3 + accumulate(rankId, 'boonChoices');
 
@@ -173,7 +177,8 @@ export const RUN_CONSTANTS = {
   timeLostOnDeath: 60,
   /** Fallback only — real durations come from data (5/10/15/20 by tier). */
   orangeDurationChallenges: 5,
-  baseBeaconChoices: 2,
+  // NOTE: base beacon choices are RANK-DERIVED — use baseChoicesFor(rank).
+  // A flat constant here would be wrong at 15 of the 16 ranks.
   /** Confirmed: "Limit: 6 simultaneous beacon choices". */
   maxBeaconChoices: 6,
   /** Confirmed: "Default: 2 rerolls per lootrun". */

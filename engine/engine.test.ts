@@ -19,8 +19,17 @@ import {
   startChallenge,
   takeBeacon,
 } from './engine';
-import { BEACONS, RUN_CONSTANTS as C, boonChoicesFor, vibrancyChanceFor } from './data';
+import {
+  BEACONS,
+  RUN_CONSTANTS as C,
+  baseChoicesFor,
+  boonChoicesFor,
+  vibrancyChanceFor,
+} from './data';
 import type { RunState } from './types';
+
+/** Base beacon choices at the default rank (Grandmaster) — 3. */
+const BASE = baseChoicesFor('grandmaster');
 
 /** Advance n challenges without caring about beacons. */
 const advance = (s: RunState, n: number): RunState =>
@@ -218,11 +227,11 @@ describe('purple and dark grey grants', () => {
 });
 
 describe('division ranks', () => {
-  it('defaults to grandmaster with 2 rerolls and 2 base choices', () => {
+  it('defaults to grandmaster with 2 rerolls and 3 base choices', () => {
     const s = createRun();
     expect(s.rank).toBe('grandmaster');
     expect(s.beaconRerolls).toBe(2);
-    expect(beaconChoices(s)).toBe(2);
+    expect(beaconChoices(s)).toBe(3);
   });
 
   it('boon choices are 3 below Sentinel II, 4 from Sentinel II', () => {
@@ -268,9 +277,9 @@ describe('daily bonus', () => {
     expect(createRun({ rank: 'admiral' }).beaconRerolls).toBe(2);
   });
 
-  it('base choices are 1 below Sentinel II, 2 from Sentinel II', () => {
-    expect(beaconChoices(createRun({ rank: 'sentinel_1' }))).toBe(1);
-    expect(beaconChoices(createRun({ rank: 'sentinel_2' }))).toBe(2);
+  it('base choices are 2 below Sentinel II, 3 from Sentinel II', () => {
+    expect(beaconChoices(createRun({ rank: 'sentinel_1' }))).toBe(2);
+    expect(beaconChoices(createRun({ rank: 'sentinel_2' }))).toBe(3);
   });
 
   it('rank gates beacon availability', () => {
@@ -409,8 +418,8 @@ describe('orange beacon choices', () => {
     const plain = takeBeacon(createRun(), { color: 'orange' });
     const vibrant = takeBeacon(createRun(), { color: 'orange', vibrant: true });
 
-    expect(beaconChoices(plain)).toBe(C.baseBeaconChoices + 1);
-    expect(beaconChoices(vibrant)).toBe(C.baseBeaconChoices + 1); // same bonus
+    expect(beaconChoices(plain)).toBe(BASE + 1);
+    expect(beaconChoices(vibrant)).toBe(BASE + 1); // same bonus
     expect(plain.orangeStacks[0]?.challengesLeft).toBe(5); // tier 0
     expect(vibrant.orangeStacks[0]?.challengesLeft).toBe(10); // tier 1
   });
@@ -423,37 +432,40 @@ describe('orange beacon choices', () => {
   it('boosts exactly D offers: still active after 5 ticks, gone after 6', () => {
     const after5 = advance(takeBeacon(createRun(), { color: 'orange' }), 5);
     expect(after5.orangeStacks).toHaveLength(1);
-    expect(beaconChoices(after5)).toBe(C.baseBeaconChoices + 1);
+    expect(beaconChoices(after5)).toBe(BASE + 1);
 
     const after6 = advance(after5, 1);
     expect(after6.orangeStacks).toHaveLength(0);
-    expect(beaconChoices(after6)).toBe(C.baseBeaconChoices);
+    expect(beaconChoices(after6)).toBe(BASE);
   });
 
   /**
    * User's worked example, verbatim (2026-07-22): orange at challenge 1
    * (+1 for 5 challenges), vibrant orange at challenge 2 (+1 for 10) —
-   * "4 more challenges with +2 choices, then the normal orange runs out."
+   * "you will have 5 offered beacons for the next 5 chals", then it drops.
    * A shared-timer model cannot produce this; independent expiries can.
+   *
+   * The 5 is what pinned the base at 3: 3 + 1 + 1 = 5. It read as 4 while
+   * the base was wrongly 2, which is what surfaced the discrepancy.
    */
-  it('reproduces the confirmed scenario: 4 overlapped challenges, then stepwise expiry', () => {
+  it('reproduces the confirmed scenario: 5 offered beacons, then stepwise expiry', () => {
     let s = takeBeacon(createRun(), { color: 'orange' }); // ch1: D=5
     s = completeChallenge(s); // plain orange: 4 left
     s = takeBeacon(s, { color: 'orange', vibrant: true }); // ch2: D=10
 
-    expect(beaconChoices(s)).toBe(4); // base 2 + 1 + 1
+    expect(beaconChoices(s)).toBe(5); // base 3 + 1 + 1 — matches the report
 
     s = advance(s, 4); // the 4 overlapped challenges (3-6)
     expect(s.orangeStacks).toHaveLength(2); // plain at 0 = last boosted offer
-    expect(beaconChoices(s)).toBe(4);
+    expect(beaconChoices(s)).toBe(5);
 
     s = advance(s, 1); // plain orange expires
     expect(s.orangeStacks).toHaveLength(1);
-    expect(beaconChoices(s)).toBe(3);
+    expect(beaconChoices(s)).toBe(4);
 
     s = advance(s, 6); // vibrant orange exhausts its 10 offers
     expect(s.orangeStacks).toHaveLength(0);
-    expect(beaconChoices(s)).toBe(C.baseBeaconChoices);
+    expect(beaconChoices(s)).toBe(BASE);
   });
 
   it('caps total choices at 6', () => {
@@ -507,7 +519,7 @@ describe('gourmand rerolls', () => {
 
   it('grants +2 choices per reroll used', () => {
     const s = useReroll(createRun(), true);
-    expect(beaconChoices(s)).toBe(C.baseBeaconChoices + 2);
+    expect(beaconChoices(s)).toBe(BASE + 2);
   });
 
   it('reaches the 6-choice cap on the two starting rerolls alone', () => {
@@ -521,7 +533,7 @@ describe('gourmand rerolls', () => {
   it('clears its bonus when the next challenge begins', () => {
     let s = useReroll(createRun(), true);
     s = startChallenge(s);
-    expect(beaconChoices(s)).toBe(C.baseBeaconChoices);
+    expect(beaconChoices(s)).toBe(BASE);
   });
 
   it('refuses to reroll with none left', () => {
