@@ -10,7 +10,7 @@
     "maxChallenges": 100,
     "timeCapSeconds": 900,
     "dailyBonusRefreshTokensPerRun": 3,
-    "dailyBonusValue": { "pulls": 10, "rewardRerolls": 1, "lootrunXp": 100 },
+    "dailyBonusSource": "data/ranks.json `dailyBonus` — canonical. Do NOT duplicate the values here: the +1 Reward Reroll is gated at Elite II and doubles with Silverbull, so a flat copy would be wrong at most ranks.",
     "tokenAcquisition": "6 tokens for 4 Shares (currency). Per user: OUT OF SCOPE for the advisor — treat tokens held as a run-setup input, not something the advisor plans toward."
   },
 

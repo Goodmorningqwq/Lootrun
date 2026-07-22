@@ -59,6 +59,11 @@ export interface RunState {
   /** Lootrun Division rank id (data/ranks.json). Gates beacons, rerolls,
    *  base choices and vibrancy. */
   rank: string;
+  /** Daily bonus claimed for this camp today (+10 pulls, +1 reward reroll at
+   *  Elite II+). Granted per CAMP per day, so it is not always available. */
+  dailyBonus: boolean;
+  /** Silverbull Subscription doubles the daily bonus. */
+  silverbull: boolean;
   /** Challenges COMPLETED so far. */
   challengesCompleted: number;
   challengesRemaining: number;

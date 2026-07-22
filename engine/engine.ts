@@ -18,14 +18,23 @@ import {
   DEFAULT_RANK,
   RUN_CONSTANTS as C,
   baseChoicesFor,
+  dailyBonusFor,
   rankIndex,
   startingRerollsFor,
 } from './data';
 
 export function createRun(overrides: Partial<RunState> = {}): RunState {
   const rank = overrides.rank ?? DEFAULT_RANK;
+  const dailyBonus = overrides.dailyBonus ?? true;
+  const silverbull = overrides.silverbull ?? false;
+  // Runs do NOT start from zero: the daily bonus is an opening endowment.
+  const daily = dailyBonus
+    ? dailyBonusFor(rank, silverbull)
+    : { pulls: 0, rewardRerolls: 0 };
   return {
     rank,
+    dailyBonus,
+    silverbull,
     challengesCompleted: 0,
     challengesRemaining: C.startingChallenges,
     timeRemaining: C.timeCapSeconds,
@@ -34,9 +43,9 @@ export function createRun(overrides: Partial<RunState> = {}): RunState {
     gourmandChoices: 0,
     // Rank-derived: 0 below Assistant I, 1 to Admiral, 2 from Admiral up.
     beaconRerolls: startingRerollsFor(rank),
-    rewardRerolls: 0,
+    rewardRerolls: daily.rewardRerolls,
     sacrifices: 0,
-    pulls: 0,
+    pulls: daily.pulls,
     curses: { generic: 0, radiance: 0 },
     boons: [],
     missions: [],

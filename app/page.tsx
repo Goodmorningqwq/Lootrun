@@ -16,7 +16,17 @@ import {
   resolveTier,
 } from '../engine/engine';
 import { activePhases, evaluateOffer } from '../engine/evaluator';
-import { BEACONS, RANKS, vibrancyChanceFor } from '../engine/data';
+import {
+  BEACONS,
+  RANKS,
+  baseChoicesFor,
+  boonChoicesFor,
+  dailyRewardRerollFor,
+  interludeWalkSpeedFor,
+  rankIndex,
+  startingRerollsFor,
+  vibrancyChanceFor,
+} from '../engine/data';
 import missionsJson from '../data/missions.json';
 import trialsJson from '../data/trials.json';
 import boonsJson from '../data/boons.json';
@@ -77,6 +87,34 @@ function tierPreview(color: BeaconColor, tier: Tier): string | null {
   }
 }
 
+/** Everything the current rank grants — beacons unlocked plus passive perks. */
+function rankPerks(rankId: string): { unlocked: string[]; locked: string[]; perks: string[] } {
+  const idx = rankIndex(rankId);
+  const unlocked: string[] = [];
+  const locked: string[] = [];
+  RANKS.forEach((r, i) => {
+    if (!r.unlocksBeacon) return;
+    (i <= idx ? unlocked : locked).push(
+      i <= idx ? r.unlocksBeacon : `${r.unlocksBeacon} (${r.name})`,
+    );
+  });
+
+  const vib = vibrancyChanceFor(rankId);
+  const walk = interludeWalkSpeedFor(rankId);
+  const perks = [
+    `${startingRerollsFor(rankId)} beacon reroll${startingRerollsFor(rankId) === 1 ? '' : 's'} per run`,
+    `${baseChoicesFor(rankId)} base beacon choices`,
+    `${boonChoicesFor(rankId)} boon choices per blue`,
+    vib > 0 ? `${Math.round(vib * 100)}% vibrancy chance` : 'no vibrant beacons',
+    walk > 0 ? `+${Math.round(walk * 100)}% interlude walk speed` : null,
+    dailyRewardRerollFor(rankId)
+      ? 'daily bonus includes +1 reward reroll'
+      : 'daily bonus has NO reward reroll (needs Elite II)',
+  ].filter((x): x is string => x !== null);
+
+  return { unlocked, locked, perks };
+}
+
 /** "+2 choices for 4 more offers, then +1 for 6 more" from the orange stacks. */
 function orangeSummary(stacks: OrangeStack[]): string {
   const expiring = new Map<number, number>();
@@ -111,8 +149,9 @@ export default function Tracker() {
     offer, toggleOffer, toggleVibrant, clearOffer, take, reroll,
     markDeath, markFailedChallenge, undo, reset, lastError,
     addMission, removeMission, addTrial, removeTrial, adjustTime,
-    addBoon, removeBoonAt, labelBoon, setRank,
+    addBoon, removeBoonAt, labelBoon, setRunSetup,
   } = useTracker();
+  const [showPerks, setShowPerks] = useState(false);
 
   const advice = useMemo(
     () => (offer.length > 0 ? evaluateOffer(run, offer) : null),
@@ -177,7 +216,7 @@ export default function Tracker() {
             rank
             <select
               value={run.rank}
-              onChange={(e) => setRank(e.target.value)}
+              onChange={(e) => setRunSetup({ rank: e.target.value })}
               className="rounded bg-zinc-800 px-2 py-1 text-sm text-zinc-100"
               title="Lootrun Division rank — gates beacons, rerolls, choices and vibrancy"
             >
@@ -186,6 +225,13 @@ export default function Tracker() {
               ))}
             </select>
           </label>
+          <button
+            onClick={() => setShowPerks((v) => !v)}
+            className="rounded bg-zinc-800 px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-700"
+            title="what this rank grants"
+          >
+            perks {showPerks ? '▲' : '▼'}
+          </button>
           <button onClick={undo} className="rounded bg-zinc-800 px-3 py-1 text-sm hover:bg-zinc-700">
             Undo
           </button>
@@ -194,6 +240,55 @@ export default function Tracker() {
           </button>
         </div>
       </header>
+
+      {/* Rank perks + run setup */}
+      {showPerks && (() => {
+        const { unlocked, locked, perks } = rankPerks(run.rank);
+        return (
+          <section className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-sm">
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <h3 className="mb-1 font-semibold text-zinc-300">Perks at this rank</h3>
+                <ul className="space-y-0.5 text-xs text-zinc-400">
+                  {perks.map((p) => <li key={p}>• {p}</li>)}
+                </ul>
+              </div>
+              <div>
+                <h3 className="mb-1 font-semibold text-zinc-300">Beacons</h3>
+                <p className="text-xs text-green-400">✓ {unlocked.join(', ') || 'none'}</p>
+                {locked.length > 0 && (
+                  <p className="mt-1 text-xs text-zinc-600">✗ locked: {locked.join(', ')}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-zinc-800 pt-3">
+              <span className="text-xs uppercase tracking-wide text-zinc-500">Run setup</span>
+              <label className="flex items-center gap-1.5 text-xs text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={run.dailyBonus}
+                  onChange={(e) => setRunSetup({ dailyBonus: e.target.checked })}
+                />
+                daily bonus (first run at this camp today)
+              </label>
+              <label className="flex items-center gap-1.5 text-xs text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={run.silverbull}
+                  onChange={(e) => setRunSetup({ silverbull: e.target.checked })}
+                />
+                Silverbull subscription (doubles it)
+              </label>
+              {run.challengesCompleted > 0 && (
+                <span className="text-xs text-amber-500">
+                  run in progress — changes no longer re-derive opening state
+                </span>
+              )}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* Warnings / errors */}
       {advice?.warnings.map((w) => (

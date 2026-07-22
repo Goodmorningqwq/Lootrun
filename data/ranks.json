@@ -1,25 +1,64 @@
 {
   "wynncraftVersion": "2.2.1",
-  "source": "wynncraft.wiki.gg/wiki/Lootrunning — Lootrun Division rank table",
+  "source": "wynncraft.wiki.gg/wiki/Lootrunning — Lootrun Division table + Daily Bonus section",
   "verified": "2026-07-22",
-  "note": "Ordered ladder. Rank gates beacon availability, starting rerolls, base choices and vibrancy chance. Beacons never listed as unlocks (blue/purple/yellow) are available from Rookie I.",
-  "uncertain": "Sentinel II grants '+1 default Beacon Choice' — with the confirmed base of 2 at high ranks, base below Sentinel II is inferred to be 1 (an offer of one beacon = no choice). Low confidence; correct in-game if wrong. Same for its '+1 default Boon Choice'.",
+  "note": "Ordered ladder. Rank gates beacon availability, starting rerolls, base beacon/boon choices, vibrancy chance, interlude walk speed, and whether the daily bonus includes a Reward Reroll.",
+
+  "progression": {
+    "xpPerRun": "Awarded at the END of a completed run, scaled by challenges completed. Max 500 XP per run, or up to 700 including the daily bonus.",
+    "failedRuns": "Grant NO XP.",
+    "persistence": "Ranks are permanent; XP requirements are cumulative."
+  },
+
+  "dailyBonus": {
+    "scope": "First run at EACH Lootrun Camp, each day — not once per day overall. With 7 camps that is up to 7 daily bonuses.",
+    "grants": { "lootrunXp": 100, "rewardPulls": 10, "rewardRerolls": 1 },
+    "rewardRerollGate": "elite_2",
+    "rewardRerollNote": "The +1 Reward Reroll is granted ONLY at Elite II or higher. XP and pulls are unconditional.",
+    "silverbull": "A Silverbull Subscription DOUBLES the daily bonus.",
+    "refreshTokens": "Lootrun Daily Bonus Refresh Tokens re-grant the bonus, max 3 per run (6 tokens for 4 Shares). Basis of the Token Assisted Speedrun.",
+    "STRATEGY_IMPACT": "Runs do not start from zero. A Grandmaster with Silverbull opens at +20 pulls and +2 reward rerolls, which lowers the marginal value of High Roller (+1 reward reroll) and Redemption."
+  },
+
+  "grandmasterNote": "Grandmaster itself grants NO additional perk — it is purely the ladder cap. Master (crimson) is the last rank that unlocks anything.",
+
   "ranks": [
-    { "id": "rookie_1", "name": "Rookie I" },
-    { "id": "rookie_2", "name": "Rookie II", "unlocksBeacon": "aqua" },
-    { "id": "rookie_3", "name": "Rookie III", "unlocksBeacon": "orange" },
-    { "id": "assistant_1", "name": "Assistant I", "beaconRerolls": 1 },
-    { "id": "assistant_2", "name": "Assistant II", "unlocksBeacon": "green" },
-    { "id": "assistant_3", "name": "Assistant III", "vibrancyChance": 0.05, "interludeWalkSpeed": 0.5 },
-    { "id": "sentinel_1", "name": "Sentinel I", "unlocksBeacon": "darkGrey" },
-    { "id": "sentinel_2", "name": "Sentinel II", "beaconChoices": 1, "boonChoices": 1 },
-    { "id": "sentinel_3", "name": "Sentinel III", "unlocksBeacon": "white" },
-    { "id": "elite_1", "name": "Elite I", "unlocksBeacon": "grey" },
-    { "id": "elite_2", "name": "Elite II", "vibrancyChance": 0.05, "dailyFreeRewardReroll": 1 },
-    { "id": "elite_3", "name": "Elite III", "unlocksBeacon": "red" },
-    { "id": "admiral", "name": "Admiral", "unlocksBeacon": "pink", "beaconRerolls": 1 },
-    { "id": "commander", "name": "Commander", "unlocksBeacon": "rainbow" },
-    { "id": "master", "name": "Master", "unlocksBeacon": "crimson" },
-    { "id": "grandmaster", "name": "Grandmaster" }
+    { "id": "rookie_1", "name": "Rookie I", "xpRequired": 0 },
+    { "id": "rookie_2", "name": "Rookie II", "xpRequired": 100, "unlocksBeacon": "aqua" },
+    { "id": "rookie_3", "name": "Rookie III", "xpRequired": 100, "unlocksBeacon": "orange" },
+    { "id": "assistant_1", "name": "Assistant I", "xpRequired": 100, "beaconRerolls": 1 },
+    { "id": "assistant_2", "name": "Assistant II", "xpRequired": 100, "unlocksBeacon": "green" },
+    {
+      "id": "assistant_3",
+      "name": "Assistant III",
+      "xpRequired": 120,
+      "vibrancyChance": 0.05,
+      "interludeWalkSpeed": 0.5,
+      "note": "Walk speed is not cosmetic: it shortens interludes, which directly reduces Adrenaline Junkie's boon drain (1 boon per 25s during interludes)."
+    },
+    { "id": "sentinel_1", "name": "Sentinel I", "xpRequired": 150, "unlocksBeacon": "darkGrey" },
+    {
+      "id": "sentinel_2",
+      "name": "Sentinel II",
+      "xpRequired": 190,
+      "beaconChoices": 1,
+      "boonChoices": 1,
+      "note": "Both defaults. Confirmed bases at high rank are 2 beacon choices and 4 boon choices, so below this rank they are 1 and 3."
+    },
+    { "id": "sentinel_3", "name": "Sentinel III", "xpRequired": 240, "unlocksBeacon": "white" },
+    { "id": "elite_1", "name": "Elite I", "xpRequired": 300, "unlocksBeacon": "grey" },
+    {
+      "id": "elite_2",
+      "name": "Elite II",
+      "xpRequired": 380,
+      "vibrancyChance": 0.05,
+      "dailyRewardReroll": true,
+      "note": "Vibrancy reaches 10% total. Also the gate for the daily bonus's +1 Reward Reroll."
+    },
+    { "id": "elite_3", "name": "Elite III", "xpRequired": 480, "unlocksBeacon": "red" },
+    { "id": "admiral", "name": "Admiral", "xpRequired": 600, "unlocksBeacon": "pink", "beaconRerolls": 1 },
+    { "id": "commander", "name": "Commander", "xpRequired": 750, "unlocksBeacon": "rainbow" },
+    { "id": "master", "name": "Master", "xpRequired": 1000, "unlocksBeacon": "crimson" },
+    { "id": "grandmaster", "name": "Grandmaster", "xpRequired": 4000 }
   ]
 }

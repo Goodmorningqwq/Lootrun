@@ -39,6 +39,9 @@ interface TrackerStore {
   reset: () => void;
   undo: () => void;
   setRank: (rank: string) => void;
+  /** Rank/daily-bonus changes re-derive the opening state, so they only make
+   *  sense before the run starts — the UI hides them after challenge 0. */
+  setRunSetup: (patch: { rank?: string; dailyBonus?: boolean; silverbull?: boolean }) => void;
 
   toggleOffer: (color: BeaconColor) => void;
   toggleVibrant: (index: number) => void;
@@ -94,6 +97,19 @@ export const useTracker = create<TrackerStore>()(
       })),
 
     setRank: (rank) => tryPush((s) => ({ ...s, rank })),
+
+    setRunSetup: (patch) =>
+      tryPush((s) =>
+        // Before the run starts, rebuild from scratch so rank/daily-bonus
+        // effects on opening pulls, rerolls and choices are recomputed.
+        s.challengesCompleted === 0
+          ? createRun({
+              rank: patch.rank ?? s.rank,
+              dailyBonus: patch.dailyBonus ?? s.dailyBonus,
+              silverbull: patch.silverbull ?? s.silverbull,
+            })
+          : { ...s, ...patch },
+      ),
 
     undo: () =>
       set((s) => ({
@@ -199,11 +215,19 @@ export const useTracker = create<TrackerStore>()(
       name: 'lootrun-advisor-run-v1',
       // v2: RunState gained `rank`. Old persisted runs must be migrated, not
       // discarded — losing the run is exactly what persistence exists to stop.
-      version: 2,
+      // v2: added `rank`. v3: added `dailyBonus` / `silverbull`.
+      version: 3,
       migrate: (persisted, version) => {
         const p = persisted as { history?: RunState[]; offer?: OfferedBeacon[] };
-        if (version < 2 && Array.isArray(p?.history)) {
-          p.history = p.history.map((s) => ({ ...s, rank: s.rank ?? 'grandmaster' }));
+        if (Array.isArray(p?.history)) {
+          p.history = p.history.map((s) => ({
+            ...s,
+            rank: s.rank ?? 'grandmaster',
+            // Existing runs predate the daily bonus, so their pull counts
+            // already reflect whatever the player had — don't retro-add it.
+            dailyBonus: s.dailyBonus ?? (version >= 3),
+            silverbull: s.silverbull ?? false,
+          }));
         }
         return p;
       },

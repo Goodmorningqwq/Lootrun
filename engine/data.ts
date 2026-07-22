@@ -68,16 +68,27 @@ export const BEACONS: Record<BeaconColor, BeaconSpec> = (() => {
 export interface RankSpec {
   id: string;
   name: string;
+  xpRequired?: number;
   unlocksBeacon?: string;
   beaconRerolls?: number;
   beaconChoices?: number;
   boonChoices?: number;
   vibrancyChance?: number;
-  dailyFreeRewardReroll?: number;
+  dailyRewardReroll?: boolean;
   interludeWalkSpeed?: number;
+  note?: string;
 }
 
-export const RANKS: RankSpec[] = (ranksJson as { ranks: RankSpec[] }).ranks;
+const rankFile = ranksJson as unknown as {
+  ranks: RankSpec[];
+  dailyBonus: {
+    grants: { lootrunXp: number; rewardPulls: number; rewardRerolls: number };
+    rewardRerollGate: string;
+  };
+};
+
+export const RANKS: RankSpec[] = rankFile.ranks;
+export const DAILY_BONUS = rankFile.dailyBonus;
 
 const RANK_INDEX: Record<string, number> = {};
 RANKS.forEach((r, i) => (RANK_INDEX[r.id] = i));
@@ -103,7 +114,10 @@ export const BEACON_MIN_RANK: Record<BeaconColor, number> = (() => {
 })();
 
 /** Cumulative rank effect up to and including the given rank. */
-function accumulate(rankId: string, key: 'beaconRerolls' | 'beaconChoices' | 'vibrancyChance'): number {
+function accumulate(
+  rankId: string,
+  key: 'beaconRerolls' | 'beaconChoices' | 'boonChoices' | 'vibrancyChance',
+): number {
   const idx = rankIndex(rankId);
   return RANKS.slice(0, idx + 1).reduce((n, r) => n + (r[key] ?? 0), 0);
 }
@@ -112,6 +126,31 @@ export const startingRerollsFor = (rankId: string) => accumulate(rankId, 'beacon
 export const vibrancyChanceFor = (rankId: string) => accumulate(rankId, 'vibrancyChance');
 /** Confirmed base of 2 at high rank; the Sentinel II '+1 default' implies 1 below. */
 export const baseChoicesFor = (rankId: string) => 1 + accumulate(rankId, 'beaconChoices');
+/** Blue offers 4 boon choices at high rank; Sentinel II's '+1' implies 3 below. */
+export const boonChoicesFor = (rankId: string) => 3 + accumulate(rankId, 'boonChoices');
+
+/** Interlude walk speed bonus — shortens interludes, easing Adrenaline Junkie. */
+export const interludeWalkSpeedFor = (rankId: string) =>
+  RANKS.slice(0, rankIndex(rankId) + 1).reduce((n, r) => n + (r.interludeWalkSpeed ?? 0), 0);
+
+/** Does the daily bonus include its +1 Reward Reroll at this rank? */
+export const dailyRewardRerollFor = (rankId: string) =>
+  rankIndex(rankId) >= rankIndex(DAILY_BONUS.rewardRerollGate);
+
+/**
+ * Daily bonus a run opens with. Granted on the first run at EACH camp per day,
+ * so runs do not start from zero. Silverbull Subscription doubles it.
+ */
+export function dailyBonusFor(rankId: string, silverbull = false): {
+  pulls: number;
+  rewardRerolls: number;
+} {
+  const mult = silverbull ? 2 : 1;
+  return {
+    pulls: DAILY_BONUS.grants.rewardPulls * mult,
+    rewardRerolls: dailyRewardRerollFor(rankId) ? DAILY_BONUS.grants.rewardRerolls * mult : 0,
+  };
+}
 
 /**
  * Availability windows. Sourced from the wiki + the community guide; the

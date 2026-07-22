@@ -19,7 +19,7 @@ import {
   startChallenge,
   takeBeacon,
 } from './engine';
-import { BEACONS, RUN_CONSTANTS as C } from './data';
+import { BEACONS, RUN_CONSTANTS as C, boonChoicesFor, vibrancyChanceFor } from './data';
 import type { RunState } from './types';
 
 /** Advance n challenges without caring about beacons. */
@@ -189,23 +189,31 @@ describe('tier resolution', () => {
 });
 
 describe('purple and dark grey grants', () => {
+  /** No daily bonus, so pulls isolate the beacon's own grant. */
+  const bare = () => createRun({ dailyBonus: false });
+
   it('purple grants 2 curses and 2 pulls at tier 0', () => {
-    const s = takeBeacon(createRun(), { color: 'purple' });
+    const s = takeBeacon(bare(), { color: 'purple' });
     expect(s.curses.generic).toBe(2);
     expect(s.pulls).toBe(2);
   });
 
   it('vibrant dark grey grants 10 curses and 10 pulls', () => {
-    const s = takeBeacon(createRun(), { color: 'darkGrey', vibrant: true });
+    const s = takeBeacon(bare(), { color: 'darkGrey', vibrant: true });
     expect(s.curses.generic).toBe(10);
     expect(s.pulls).toBe(10);
   });
 
   it('aqua-boosted purple doubles to tier 1 amounts', () => {
-    let s = takeBeacon(createRun(), { color: 'aqua' });
+    let s = takeBeacon(bare(), { color: 'aqua' });
     s = takeBeacon(s, { color: 'purple' }); // tier 1: 4 curses, 4 pulls
     expect(s.curses.generic).toBe(4);
     expect(s.pulls).toBe(4);
+  });
+
+  it('stacks on top of the daily bonus when it is active', () => {
+    const s = takeBeacon(createRun(), { color: 'purple' }); // 10 daily + 2
+    expect(s.pulls).toBe(12);
   });
 });
 
@@ -215,6 +223,43 @@ describe('division ranks', () => {
     expect(s.rank).toBe('grandmaster');
     expect(s.beaconRerolls).toBe(2);
     expect(beaconChoices(s)).toBe(2);
+  });
+
+  it('boon choices are 3 below Sentinel II, 4 from Sentinel II', () => {
+    expect(boonChoicesFor('sentinel_1')).toBe(3);
+    expect(boonChoicesFor('grandmaster')).toBe(4);
+  });
+
+  it('vibrancy is 0 below Assistant III, 5% there, 10% from Elite II', () => {
+    expect(vibrancyChanceFor('sentinel_1')).toBeCloseTo(0.05);
+    expect(vibrancyChanceFor('assistant_2')).toBe(0);
+    expect(vibrancyChanceFor('elite_2')).toBeCloseTo(0.1);
+  });
+});
+
+describe('daily bonus', () => {
+  it('a run opens with the daily bonus, not from zero', () => {
+    const s = createRun();
+    expect(s.pulls).toBe(10);
+    expect(s.rewardRerolls).toBe(1);
+  });
+
+  it('withholds the reward reroll below Elite II, but still grants pulls', () => {
+    const s = createRun({ rank: 'elite_1' });
+    expect(s.pulls).toBe(10);
+    expect(s.rewardRerolls).toBe(0);
+  });
+
+  it('silverbull doubles the daily bonus', () => {
+    const s = createRun({ silverbull: true });
+    expect(s.pulls).toBe(20);
+    expect(s.rewardRerolls).toBe(2);
+  });
+
+  it('grants nothing when the daily bonus is already used for this camp', () => {
+    const s = createRun({ dailyBonus: false });
+    expect(s.pulls).toBe(0);
+    expect(s.rewardRerolls).toBe(0);
   });
 
   it('derives starting rerolls from rank: rookie 0, assistant 1, admiral 2', () => {
