@@ -304,12 +304,25 @@ export const useTracker = create<TrackerStore>()(
       // v2: RunState gained `rank`. Old persisted runs must be migrated, not
       // discarded — losing the run is exactly what persistence exists to stop.
       // v2: `rank`. v3: `dailyBonus`/`silverbull`. v4: missions became slots.
-      version: 4,
+      // v5: drop any persisted strategy — see below.
+      version: 5,
       migrate: (persisted, version) => {
         const p = persisted as {
           history?: Array<RunState & { missions: Array<string | MissionSlot> }>;
           offer?: OfferedBeacon[];
+          strategy?: unknown;
+          strategyCustomized?: boolean;
         };
+        if (version < 5) {
+          // Earlier builds persisted a full copy of the default strategy and
+          // derived "customized" by comparing it to DEFAULT_STRATEGY. The
+          // moment the shipped default gained a field, every stale copy
+          // compared unequal and was mislabelled custom — freezing users on an
+          // old strategy. Drop it once; from v5 on we only persist a strategy
+          // the user actually edited.
+          delete p.strategy;
+          delete p.strategyCustomized;
+        }
         if (Array.isArray(p?.history)) {
           p.history = p.history.map((s) => ({
             ...s,
@@ -330,18 +343,24 @@ export const useTracker = create<TrackerStore>()(
       partialize: (s) => ({
         history: s.history,
         offer: s.offer,
-        strategy: s.strategy,
+        // Persist the strategy ONLY when the user customised it. Storing an
+        // untouched copy would freeze users on whatever the default looked
+        // like the day they first loaded the app, so shipped improvements to
+        // the default strategy would never reach them.
+        strategy: s.strategyCustomized ? s.strategy : undefined,
         strategyCustomized: s.strategyCustomized,
       }),
-      // A persisted custom strategy must be pushed into the evaluator module on
-      // load, or advice would score against the default until the next edit.
       onRehydrateStorage: () => (state) => {
-        if (!state?.strategy) return;
-        setStrategy(state.strategy);
-        // Derive the flag rather than trusting it: a strategy persisted before
-        // the flag existed would otherwise read as "default" while custom.
-        state.strategyCustomized =
-          JSON.stringify(state.strategy) !== JSON.stringify(DEFAULT_STRATEGY);
+        if (!state) return;
+        if (state.strategyCustomized && state.strategy) {
+          // A custom strategy must be pushed into the evaluator module on load,
+          // or advice would score against the default until the next edit.
+          setStrategy(state.strategy);
+        } else {
+          state.strategy = DEFAULT_STRATEGY;
+          state.strategyCustomized = false;
+          setStrategy(DEFAULT_STRATEGY);
+        }
       },
     },
   ),

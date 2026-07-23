@@ -4,7 +4,6 @@
   "wynncraftVersion": "2.2.1",
   "basedOn": "Ultimate Wynncraft Lootrun Guide, Run Setup + Run Combos sections",
   "confidence": "Beacon orderings are inherited from a pre-2.2.1 snapshot. Every `aqua` position is marked `disputed` pending the additive-boosting measurement.",
-
   "runConstants": {
     "startingChallenges": 12,
     "maxChallenges": 100,
@@ -13,67 +12,119 @@
     "dailyBonusSource": "data/ranks.json `dailyBonus` — canonical. Do NOT duplicate the values here: the +1 Reward Reroll is gated at Elite II and doubles with Silverbull, so a flat copy would be wrong at most ranks.",
     "tokenAcquisition": "6 tokens for 4 Shares (currency). Per user: OUT OF SCOPE for the advisor — treat tokens held as a run-setup input, not something the advisor plans toward."
   },
-
   "goals": {
     "runnable": {
       "all": [
-        { "missionsWithRole": "boon_generator", "gte": 1 },
-        { "missionsWithRole": "pull_generator", "gte": 1 },
-        { "path": "challengesRemaining", "gte": 20 }
+        {
+          "missionsWithRole": "boon_generator",
+          "gte": 1
+        },
+        {
+          "missionsWithRole": "pull_generator",
+          "gte": 1
+        },
+        {
+          "path": "challengesRemaining",
+          "gte": 20
+        }
       ],
       "note": "Weak/random generators (Jester's Trick, Complete Chaos) do not satisfy this alone."
     }
   },
-
   "invariants": {
     "note": "Checked every challenge, in every phase. Violations outrank phase priority.",
     "minChallengesRemaining": 4,
     "idealBeaconChoices": 5,
     "timeFloorSeconds": 150
   },
-
   "safety": [
     {
       "id": "timeout-guard",
       "priority": 1000,
-      "when": { "path": "timeRemaining", "lt": 150 },
-      "prefer": ["green", "red"],
+      "when": {
+        "path": "timeRemaining",
+        "lt": 150
+      },
+      "prefer": [
+        "green",
+        "red"
+      ],
       "why": "Timeout risk, and GREEN SELF-EXCLUDES — a green you decline is gone next challenge. This is take-now-or-lose-it, not a ranking preference.",
       "correctedFrom": "Earlier rationale said 'green costs nothing because it returns next challenge' — exactly backwards. Green is one of only two self-excluding beacons (with red), so declining it forfeits it. Aqua and orange are the ones that freely return.",
-      "disabledBy": { "trial": "chronotrigger", "reason": "Cannot gain time for 12 challenges — the guard is INOPERATIVE. Warn loudly instead of recommending green." }
+      "disabledBy": {
+        "trial": "chronotrigger",
+        "reason": "Cannot gain time for 12 challenges — the guard is INOPERATIVE. Warn loudly instead of recommending green."
+      }
     },
     {
       "id": "challenge-floor",
       "priority": 900,
-      "when": { "path": "challengesRemaining", "lte": 4 },
-      "prefer": ["red", "white"],
+      "when": {
+        "path": "challengesRemaining",
+        "lte": 4
+      },
+      "prefer": [
+        "red",
+        "white"
+      ],
       "why": "Below the 4-challenge buffer the run ends before any combo can pay off."
     },
     {
       "id": "hubris-warning",
       "priority": 900,
-      "when": { "flag": "hubris" },
+      "when": {
+        "flag": "hubris"
+      },
       "uiWarning": "HUBRIS ACTIVE — /kill or any death ends the run immediately."
     },
     {
       "id": "last-challenge-suppression",
       "priority": 800,
-      "when": { "path": "challengesRemaining", "eq": 1 },
-      "suppress": ["yellow", "grey", "crimson", "blue", "chronokinesis", "sacrificial_ritual", "gambling_beast"],
-      "stillWorks": ["red", "white", "purple", "darkGrey"],
+      "when": {
+        "path": "challengesRemaining",
+        "eq": 1
+      },
+      "suppress": [
+        "yellow",
+        "grey",
+        "crimson",
+        "blue",
+        "chronokinesis",
+        "sacrificial_ritual",
+        "gambling_beast"
+      ],
+      "stillWorks": [
+        "red",
+        "white",
+        "purple",
+        "darkGrey"
+      ],
       "why": "Does nothing on the final challenge.",
       "detail": "Guide (Misc. Info): on the final challenge red/white beacons and purple/darkGrey pulls still work, while yellow, grey, crimson and blue beacons, plus new curses, Chronokinesis, Sacrificial Ritual and Gambling Beast procs, all do nothing.",
       "correctedFrom": "Blue was missing from this list — the advisor would have recommended a dead Blue Beacon on the last challenge."
     }
   ],
-
   "phases": [
     {
       "id": "opening",
       "name": "Opening",
-      "when": { "path": "challenge", "lt": 4 },
-      "beaconPriority": ["orange", "aqua", "pink", "red", "blue"],
-      "tiedRanks": [["aqua", "pink"]],
+      "when": {
+        "path": "challenge",
+        "lt": 4
+      },
+      "beaconPriority": [
+        "orange",
+        "aqua",
+        "pink",
+        "red",
+        "blue"
+      ],
+      "tiedRanks": [
+        [
+          "aqua",
+          "pink"
+        ]
+      ],
       "intent": "Buy optionality before anything else. Beacon choices are the input to every later decision.",
       "escapeHatch": {
         "rule": "A run can be RESET by failing before challenge 4. Sacrificed pulls are retained; a 15-minute cooldown applies.",
@@ -88,9 +139,15 @@
     {
       "id": "mission_gate",
       "name": "Mission Gate (forced)",
-      "when": { "path": "challenge", "eq": 4 },
+      "when": {
+        "path": "challenge",
+        "eq": 4
+      },
       "forced": true,
-      "offers": { "type": "mission", "choices": 3 },
+      "offers": {
+        "type": "mission",
+        "choices": 3
+      },
       "gate": {
         "rule": "DO NOT fulfil the mission until a comfortable run extension is secured.",
         "why": "Committing an archetype before you have the challenges to execute it wastes the slot.",
@@ -106,27 +163,86 @@
     {
       "id": "extension",
       "name": "Run Extension",
-      "when": { "all": [ { "path": "challenge", "gte": 4 }, { "path": "challenge", "lt": 10 } ] },
-      "beaconPriority": ["white", "orange", "aqua", "red", "pink", "blue"],
+      "when": {
+        "all": [
+          {
+            "path": "challenge",
+            "gte": 4
+          },
+          {
+            "path": "challenge",
+            "lt": 10
+          }
+        ]
+      },
+      "beaconPriority": [
+        "white",
+        "orange",
+        "aqua",
+        "red",
+        "pink",
+        "blue"
+      ],
       "intent": "Convert the 12 starting challenges into a runway long enough for an archetype to pay off.",
       "targets": [
-        { "combo": ["aqua:vibrant", "white:vibrant"], "payoff": "+30 challenges", "priority": 100, "disputed": true },
-        { "combo": ["aqua:vibrant", "red:vibrant"], "payoff": "+15 challenges", "priority": 60, "constraint": "reds cannot repeat" },
-        { "combo": ["white"], "payoff": "+25 challenges", "priority": 50, "note": "Acceptable unstacked alternative." }
+        {
+          "combo": [
+            "aqua:vibrant",
+            "white:vibrant"
+          ],
+          "payoff": "+30 challenges",
+          "priority": 100,
+          "disputed": true
+        },
+        {
+          "combo": [
+            "aqua:vibrant",
+            "red:vibrant"
+          ],
+          "payoff": "+15 challenges",
+          "priority": 60,
+          "constraint": "reds cannot repeat"
+        },
+        {
+          "combo": [
+            "white"
+          ],
+          "payoff": "+25 challenges",
+          "priority": 50,
+          "note": "Acceptable unstacked alternative."
+        }
       ],
-      "maintain": ["Refresh orange whenever offered", "Keep >= 5 beacon choices"]
+      "maintain": [
+        "Refresh orange whenever offered",
+        "Keep >= 5 beacon choices"
+      ]
     },
     {
       "id": "rainbow_window",
       "name": "Rainbow Window",
-      "when": { "path": "challenge", "gte": 10 },
-      "beaconPriority": ["rainbow", "orange", "aqua", "grey", "pink", "white", "red", "blue"],
+      "when": {
+        "path": "challenge",
+        "gte": 10
+      },
+      "beaconPriority": [
+        "rainbow",
+        "orange",
+        "aqua",
+        "grey",
+        "pink",
+        "white",
+        "red",
+        "blue"
+      ],
       "hardRule": {
         "rule": "Take rainbow on sight. Never skip it.",
         "why": "Rainbow uses a ramping hazard rate after challenge 10 — the chance climbs until it appears, then resets. Skipping forfeits an event you cannot re-roll into cheaply."
       },
       "rerollPolicy": {
-        "when": { "path": "beaconChoices", "gte": 4 },
+        "when": {
+          "path": "beaconChoices",
+          "gte": 4
+        },
         "action": "reroll to force orange or rainbow",
         "note": "2.2.1 makes early forcing weak — at challenge 11 the rainbow hazard is still low. Rerolling for rainbow gets better the longer it has been absent."
       }
@@ -134,16 +250,33 @@
     {
       "id": "trial_prep",
       "name": "Trial Prep",
-      "when": { "path": "challenge", "eq": 19 },
-      "beaconPriority": ["aqua", "rainbow", "orange"],
+      "when": {
+        "path": "challenge",
+        "eq": 19
+      },
+      "beaconPriority": [
+        "aqua",
+        "rainbow",
+        "orange"
+      ],
       "intent": "Hold an aqua into challenge 20 — 'aqua boosted crimson beacons are a near must'.",
       "disputed": true
     },
     {
       "id": "trial_window",
       "name": "Trial Window",
-      "when": { "path": "challenge", "gte": 20 },
-      "beaconPriority": ["rainbow", "crimson", "orange", "aqua", "grey", "pink"],
+      "when": {
+        "path": "challenge",
+        "gte": 20
+      },
+      "beaconPriority": [
+        "rainbow",
+        "crimson",
+        "orange",
+        "aqua",
+        "grey",
+        "pink"
+      ],
       "crimsonPolicy": {
         "takeIf": "aqua-boosted",
         "skipTolerance": 2,
@@ -151,9 +284,22 @@
       },
       "trialPreference": {
         "source": "data/trials.json tierList (guide Trials tab)",
-        "order": ["S", "A", "B", "C"],
-        "S": ["hubris", "ultimate_sacrifice", "chronotrigger", "lights_out"],
-        "neverTake": ["imperitia", "monochromokopia"],
+        "order": [
+          "S",
+          "A",
+          "B",
+          "C"
+        ],
+        "S": [
+          "hubris",
+          "ultimate_sacrifice",
+          "chronotrigger",
+          "lights_out"
+        ],
+        "neverTake": [
+          "imperitia",
+          "monochromokopia"
+        ],
         "firstTrialRule": "Ultimate Sacrifice is the recommended FIRST trial while mob scaling is still low.",
         "secondTrialRule": "Gambling Beast should almost always be the SECOND trial — sustain it by stacking vibrant aqua/green. It grants no reroll if the timer cannot absorb the cost.",
         "note": "Archetype `trialPreference` refines this ordering but must not promote anything in `neverTake`."
@@ -162,7 +308,18 @@
     {
       "id": "mission_completion",
       "name": "Mission Completion Deadline",
-      "when": { "all": [ { "path": "challenge", "gte": 20 }, { "path": "challenge", "lt": 40 } ] },
+      "when": {
+        "all": [
+          {
+            "path": "challenge",
+            "gte": 20
+          },
+          {
+            "path": "challenge",
+            "lt": 40
+          }
+        ]
+      },
       "deadline": {
         "rule": "Spend all 3 grey beacons before challenge 40.",
         "why": "Grey stops appearing around challenge 30-50. An unspent mission slot at 40 is a permanently wasted third of your mission capacity."
@@ -172,7 +329,10 @@
     {
       "id": "fork",
       "name": "Combo Evaluation Fork",
-      "when": { "path": "challenge", "gte": 30 },
+      "when": {
+        "path": "challenge",
+        "gte": 30
+      },
       "decision": {
         "test": "goals.runnable",
         "ifTrue": "farm",
@@ -184,16 +344,41 @@
       "name": "Farm (good combo)",
       "entryFrom": "fork:true",
       "intent": "Extend toward challenge 100 and cycle the combo.",
-      "beaconPriority": ["rainbow", "white", "orange", "aqua", "purple", "yellow", "red", "green"],
-      "manage": ["Balance red (challenges) against green (time)", "Sustain boons via aqua-stacked vibrant blue for 400% potency"],
-      "extension": { "combo": ["aqua:vibrant", "white:vibrant"], "payoff": "+30 challenges", "note": "Re-usable to push to 100." }
+      "beaconPriority": [
+        "rainbow",
+        "white",
+        "orange",
+        "aqua",
+        "purple",
+        "yellow",
+        "red",
+        "green"
+      ],
+      "manage": [
+        "Balance red (challenges) against green (time)",
+        "Sustain boons via aqua-stacked vibrant blue for 400% potency"
+      ],
+      "extension": {
+        "combo": [
+          "aqua:vibrant",
+          "white:vibrant"
+        ],
+        "payoff": "+30 challenges",
+        "note": "Re-usable to push to 100."
+      }
     },
     {
       "id": "salvage",
       "name": "Salvage (no combo)",
       "entryFrom": "fork:false",
       "intent": "Cash out a failed run rather than limp to the end.",
-      "beaconPriority": ["purple", "darkGrey", "crimson", "rainbow", "orange"],
+      "beaconPriority": [
+        "purple",
+        "darkGrey",
+        "crimson",
+        "rainbow",
+        "orange"
+      ],
       "plan": [
         "FIRST: try the comboless pull line — Porphyrophobia + Route Indigo yields up to 300+ pulls from an otherwise dead run. Non-terminal, so attempt before any cash-out.",
         "Other comboless-viable missions: Redemption, High Roller, Requiem, Radiant Hunter, Chronokinesis. Lights Out is the most reliable passive (200+ pulls).",
@@ -207,9 +392,20 @@
     {
       "id": "endgame",
       "name": "Endgame",
-      "when": { "path": "challengesRemaining", "lte": 7 },
-      "beaconPriority": ["red", "purple", "darkGrey", "yellow", "white"],
-      "activates": ["knife_edge"],
+      "when": {
+        "path": "challengesRemaining",
+        "lte": 7
+      },
+      "beaconPriority": [
+        "red",
+        "purple",
+        "darkGrey",
+        "yellow",
+        "white"
+      ],
+      "activates": [
+        "knife_edge"
+      ],
       "notes": [
         "Knife Edge pays 7 minus challengesRemaining — worthless earlier, strong here.",
         "Red priority rises: challenges, not time, are now the binding constraint.",
@@ -217,18 +413,66 @@
       ]
     }
   ],
-
   "rerollPolicy": {
-    "saveFor": ["rainbow", "orange", "grey", "crimson", "darkGrey"],
+    "saveFor": [
+      "rainbow",
+      "orange",
+      "grey",
+      "crimson",
+      "darkGrey"
+    ],
     "uselessAfterChallenge": 40,
     "note": "Gourmand's rate (+1 or +2 choices per reroll) is DISPUTED and materially changes this policy."
   },
-
   "boonPolicy": {
     "note": "Dynamic boons favour early pickup, static boons favour late. See data/boons.json `kind`.",
-    "preferred": ["killstreak", "madman"],
+    "preferred": [
+      "killstreak",
+      "madman"
+    ],
     "madmanRule": "Hold 6-8 curses before taking Madman; it snapshots and caps at 8.",
     "metaNote": "Guide recommends prioritising EHP boons given current meta damage output — a survivability concern the state machine cannot model. Expose as a user preference.",
     "potencyCeiling": "Aqua-stacked Vibrant Blue yields boons at 400% potency."
+  },
+  "tactics": {
+    "note": "Cross-phase tactics from playtest feedback (Mujtaba, 2026-07-24). These layer on top of phase priority and archetype bias.",
+    "boostedOnly": {
+      "why": "High-value beacons are not worth taking raw — people want them aqua/vibrant for max power. Taking an unboosted one wastes the single use (white/darkGrey) or the option count (grey).",
+      "beacons": [
+        "rainbow",
+        "white",
+        "grey",
+        "crimson",
+        "darkGrey"
+      ],
+      "unboostedPenalty": -35,
+      "boostedBonusPerTier": 20,
+      "firstRainbowRaw": true,
+      "firstRainbowWhy": "The FIRST rainbow is worth taking raw — it makes everything vibrant, so getting it online early pays for itself. Later ones should be stacked."
+    },
+    "aquaLoop": {
+      "why": "The optimised steady state is alternating aqua with the payoff beacon your combo needs: aqua->blue->aqua->blue for a boon combo, aqua->green->aqua->green for time, purple for curses, yellow for flying chests.",
+      "setupBonus": 30,
+      "payoffBonus": 45,
+      "payoffByNeed": {
+        "get_boons": "blue",
+        "gain_time": "green",
+        "get_curses": "purple",
+        "open_chests": "yellow",
+        "earn_pulls": "purple",
+        "offered_beacons": "orange"
+      }
+    },
+    "orangeRefresh": {
+      "why": "Refresh orange BEFORE it lapses — losing beacon choices shrinks every later decision.",
+      "whenChallengesLeftLte": 2,
+      "bonus": 40
+    },
+    "missionUrgency": {
+      "why": "Do not PROMOTE a raw grey — more mission choices means a better combo, and greys are skippable ~10x. Only push an unboosted grey once the window is closing and waiting is no longer affordable.",
+      "bonus": 35,
+      "rawGreyUrgentFromChallenge": 25,
+      "windowNote": "Grey stops appearing around challenge 30, so 25 leaves a few offers of slack. TUNABLE — set to taste."
+    }
   }
 }

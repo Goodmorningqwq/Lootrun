@@ -238,16 +238,107 @@ describe('archetype-aware beacon priority (playtester feedback)', () => {
     expect(blue.reasons.join(' ')).toMatch(/avoids blue/i);
   });
 
-  it('urges grey while mission slots remain open', () => {
+  it('does NOT urge a RAW grey early — waiting for a boosted one is better', () => {
     const a = evaluateOffer(runAt(12), [{ color: 'grey' }, { color: 'blue' }]);
+    const grey = a.ranked.find((r) => r.color === 'grey')!;
+    expect(grey.reasons.join(' ')).not.toMatch(/missions early/i);
+    expect(grey.reasons.join(' ')).toMatch(/only 3 mission choices/i);
+  });
+
+  it('urges a BOOSTED grey while slots remain open', () => {
+    const a = evaluateOffer(runAt(12, { pendingAqua: 1 }), [
+      { color: 'grey' },
+      { color: 'blue' },
+    ]);
     expect(a.ranked[0]?.color).toBe('grey');
-    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/missions early/i);
+    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/missions early.*boosted/i);
+  });
+
+  it('urges even a raw grey once the window is closing', () => {
+    const a = evaluateOffer(runAt(26), [{ color: 'grey' }, { color: 'blue' }]);
+    expect(a.ranked[0]?.color).toBe('grey');
+    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/Window closing/i);
   });
 
   it('urges rainbow whenever one is offered', () => {
     const a = evaluateOffer(runAt(15), [{ color: 'blue' }, { color: 'rainbow' }]);
     expect(a.ranked[0]?.color).toBe('rainbow');
     expect(a.ranked[0]?.reasons.join(' ')).toMatch(/rainbow early/i);
+  });
+});
+
+describe('tactics: boosted-only, aqua loop, orange refresh', () => {
+  it('prefers a boosted grey over a raw one — the reported complaint', () => {
+    // Mujtaba: "it was recommending I take a non boosted gray but I prefer not
+    // doing that... more options means better run combo."
+    const raw = evaluateOffer(runAt(12), [{ color: 'grey' }, { color: 'pink' }]);
+    const greyRaw = raw.ranked.find((r) => r.color === 'grey')!;
+    expect(greyRaw.reasons.join(' ')).toMatch(/only 3 mission choices/i);
+
+    // Same offer with an aqua banked -> grey resolves boosted and wins.
+    const boosted = evaluateOffer(runAt(12, { pendingAqua: 1 }), [
+      { color: 'grey' },
+      { color: 'pink' },
+    ]);
+    const greyBoosted = boosted.ranked.find((r) => r.color === 'grey')!;
+    expect(greyBoosted.score).toBeGreaterThan(greyRaw.score);
+    expect(greyBoosted.reasons.join(' ')).toMatch(/Boosted grey/i);
+  });
+
+  it('penalises an unboosted white but not the FIRST rainbow', () => {
+    const a = evaluateOffer(runAt(12), [{ color: 'white' }, { color: 'rainbow' }]);
+    const white = a.ranked.find((r) => r.color === 'white')!;
+    const rainbow = a.ranked.find((r) => r.color === 'rainbow')!;
+    expect(white.reasons.join(' ')).toMatch(/Unboosted white wastes it/i);
+    expect(rainbow.reasons.join(' ')).toMatch(/First rainbow — worth taking raw/i);
+  });
+
+  it('penalises a second raw rainbow', () => {
+    const s = runAt(20, { beaconUses: { rainbow: 1 } });
+    const a = evaluateOffer(s, [{ color: 'rainbow' }]);
+    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/Unboosted rainbow wastes it/i);
+  });
+
+  it('aqua loop: sets up aqua, then spends it on the combo payoff', () => {
+    // Flying-chest combo -> payoff is yellow.
+    const held = slots('hoarder', 'interest_scheme');
+
+    const setup = evaluateOffer(runAt(15, { missions: held }), [
+      { color: 'aqua' },
+      { color: 'red' },
+    ]);
+    expect(setup.ranked[0]?.color).toBe('aqua');
+    expect(setup.ranked[0]?.reasons.join(' ')).toMatch(/Set up aqua -> yellow/i);
+
+    const spend = evaluateOffer(runAt(15, { missions: held, pendingAqua: 1 }), [
+      { color: 'yellow' },
+      { color: 'red' },
+    ]);
+    expect(spend.ranked[0]?.color).toBe('yellow');
+    expect(spend.ranked[0]?.reasons.join(' ')).toMatch(/Spend the banked aqua/i);
+  });
+
+  it('aqua loop follows the mission objective when one is un-activated', () => {
+    // get_boons objective -> payoff is blue, per payoffByNeed.
+    const s = runAt(15, {
+      missions: [{ id: 'hoarder', fulfilled: false, objective: 'get_boons' }],
+      pendingAqua: 1,
+    });
+    const a = evaluateOffer(s, [{ color: 'blue' }, { color: 'red' }]);
+    expect(a.ranked[0]?.color).toBe('blue');
+    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/Spend the banked aqua here — blue/i);
+  });
+
+  it('promotes orange when a stack is about to lapse', () => {
+    const soon = runAt(15, { orangeStacks: [{ bonus: 1, challengesLeft: 1 }] });
+    const a = evaluateOffer(soon, [{ color: 'orange' }, { color: 'blue' }]);
+    expect(a.ranked[0]?.color).toBe('orange');
+    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/Refresh orange/i);
+
+    // A fresh stack should not trigger the refresh nudge.
+    const fresh = runAt(15, { orangeStacks: [{ bonus: 1, challengesLeft: 9 }] });
+    const b = evaluateOffer(fresh, [{ color: 'orange' }]);
+    expect(b.ranked[0]?.reasons.join(' ')).not.toMatch(/Refresh orange/i);
   });
 });
 

@@ -15,8 +15,8 @@ import missionsJson from '../data/missions.json';
 import archetypesJson from '../data/archetypes.json';
 import objectivesJson from '../data/mission_objectives.json';
 import type { BeaconColor, OfferedBeacon, RunState } from './types';
-import { beaconChoices, pendingMission } from './engine';
-import { RUN_CONSTANTS } from './data';
+import { beaconChoices, pendingMission, resolveTier } from './engine';
+import { BEACONS, RUN_CONSTANTS } from './data';
 
 /* ------------------------------------------------------------------ */
 /* Strategy file types (only the structured parts the evaluator reads) */
@@ -56,12 +56,30 @@ interface Phase {
   entryFrom?: string;
 }
 
+/** Cross-phase tactics that layer on top of phase priority and archetype bias. */
+export interface Tactics {
+  boostedOnly?: {
+    beacons: string[];
+    unboostedPenalty: number;
+    boostedBonusPerTier: number;
+    firstRainbowRaw?: boolean;
+  };
+  aquaLoop?: {
+    setupBonus: number;
+    payoffBonus: number;
+    payoffByNeed: Record<string, string>;
+  };
+  orangeRefresh?: { whenChallengesLeftLte: number; bonus: number };
+  missionUrgency?: { bonus: number; rawGreyUrgentFromChallenge: number };
+}
+
 export interface Strategy {
   id: string;
   name?: string;
   goals: { runnable: Condition & { all?: Condition[] } };
   safety: SafetyRule[];
   phases: Phase[];
+  tactics?: Tactics;
 }
 
 /**
@@ -490,6 +508,29 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
     : undefined;
   const armingBeacons = new Set(armingObjective?.advancedBy ?? []);
 
+  const tactics = strategy.tactics ?? {};
+
+  /**
+   * The beacon this run's combo actually converts into value — what an aqua
+   * should be spent on. Taken from the un-activated mission's objective if
+   * there is one, else the archetype's strongest positive bias.
+   */
+  const payoffBeacon: BeaconColor | undefined = (() => {
+    const byNeed = tactics.aquaLoop?.payoffByNeed ?? {};
+    if (armingMission?.objective && byNeed[armingMission.objective]) {
+      return byNeed[armingMission.objective] as BeaconColor;
+    }
+    const entries = Object.entries(bias).filter(([, v]) => (v ?? 0) > 0);
+    if (entries.length === 0) return undefined;
+    entries.sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0));
+    return entries[0]?.[0] as BeaconColor;
+  })();
+
+  /** Orange about to lapse — refresh before beacon choices shrink. */
+  const orangeExpiringIn = state.orangeStacks.length
+    ? Math.min(...state.orangeStacks.map((o) => o.challengesLeft))
+    : Infinity;
+
   // "Get all missions and rainbow as early as possible" (playtester request):
   // grey is urgent while mission slots remain and its window is open; rainbow
   // is urgent whenever it is legally offerable (it uses a ramping pity timer,
@@ -534,15 +575,72 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
     }
 
     // --- earliness urgency --------------------------------------------
+    // A grey is only *promoted* when it is worth taking: boosted (more mission
+    // choices → better combo), or the window is closing so waiting no longer
+    // pays. Promoting a raw grey early is the behaviour playtesting rejected.
     if (b.color === 'grey' && greyUrgent) {
-      score += 35;
-      reasons.push(
-        `Get missions early — ${missionSlotsLeft} slot${missionSlotsLeft > 1 ? 's' : ''} still open`,
-      );
+      const mu = tactics.missionUrgency;
+      const greyTier = resolveTier(state, b);
+      const windowClosing =
+        !mu || state.challengesCompleted >= mu.rawGreyUrgentFromChallenge;
+      if (greyTier > 0 || windowClosing) {
+        score += mu?.bonus ?? 35;
+        reasons.push(
+          greyTier > 0
+            ? `Get missions early — ${missionSlotsLeft} slot${missionSlotsLeft > 1 ? 's' : ''} open, and this grey is boosted`
+            : `Window closing (challenge ${state.challengesCompleted}) — take the grey even raw, ${missionSlotsLeft} slot${missionSlotsLeft > 1 ? 's' : ''} still empty`,
+        );
+      }
     }
     if (b.color === 'rainbow' && state.rainbowChallengesLeft === 0) {
       score += 45;
       reasons.push('Get rainbow early — ramping pity timer, do not pass it');
+    }
+
+    // --- tactics: high-value beacons want to be boosted ---------------
+    const bo = tactics.boostedOnly;
+    if (bo?.beacons.includes(b.color)) {
+      const tier = resolveTier(state, b);
+      const firstRainbowRaw =
+        bo.firstRainbowRaw && b.color === 'rainbow' && (state.beaconUses.rainbow ?? 0) === 0;
+      if (tier === 0 && !firstRainbowRaw) {
+        score += bo.unboostedPenalty;
+        reasons.push(
+          b.color === 'grey'
+            ? 'Unboosted grey = only 3 mission choices (5 when aqua-boosted). Greys are skippable ~10x — wait for a boosted one.'
+            : `Unboosted ${b.color} wastes it — wait for an aqua/vibrant one`,
+        );
+      } else if (firstRainbowRaw) {
+        reasons.push('First rainbow — worth taking raw, it makes everything vibrant');
+      } else {
+        score += bo.boostedBonusPerTier * tier;
+        reasons.push(
+          b.color === 'grey'
+            ? `Boosted grey (T${tier}) — ${(BEACONS.grey.tiers as { missionChoices?: number[] }).missionChoices?.[tier] ?? '?'} mission choices`
+            : `Boosted ${b.color} (T${tier}) — taken at power`,
+        );
+      }
+    }
+
+    // --- tactics: the aqua loop ---------------------------------------
+    const loop = tactics.aquaLoop;
+    if (loop && payoffBeacon) {
+      if (state.pendingAqua > 0 && b.color === payoffBeacon) {
+        score += loop.payoffBonus;
+        reasons.push(`Spend the banked aqua here — ${payoffBeacon} is what this combo converts`);
+      } else if (state.pendingAqua === 0 && b.color === 'aqua') {
+        score += loop.setupBonus;
+        reasons.push(`Set up aqua -> ${payoffBeacon} (the combo's payoff loop)`);
+      }
+    }
+
+    // --- tactics: refresh orange before it lapses ----------------------
+    const orf = tactics.orangeRefresh;
+    if (orf && b.color === 'orange' && orangeExpiringIn <= orf.whenChallengesLeftLte) {
+      score += orf.bonus;
+      reasons.push(
+        `Refresh orange — a stack expires in ${orangeExpiringIn} offer${orangeExpiringIn === 1 ? '' : 's'}`,
+      );
     }
 
     let suppressed = false;
