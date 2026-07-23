@@ -175,8 +175,8 @@ export const RUN_CONSTANTS = {
   timeOnChallengeStart: 60,
   timeOnChallengeComplete: 90,
   timeLostOnDeath: 60,
-  /** Fallback only — real durations come from data (5/10/15/20 by tier). */
-  orangeDurationChallenges: 5,
+  /** Fallback only — real durations come from data (10/15/20/25 by tier). */
+  orangeDurationChallenges: 10,
   // NOTE: base beacon choices are RANK-DERIVED — use baseChoicesFor(rank).
   // A flat constant here would be wrong at 15 of the 16 ranks.
   /** Confirmed: "Limit: 6 simultaneous beacon choices". */

@@ -405,7 +405,7 @@ describe('failing a challenge', () => {
 
   it('still ticks orange and rainbow timers — the challenge happened', () => {
     const s = failChallenge(takeBeacon(createRun(), { color: 'orange' }));
-    expect(s.orangeStacks[0]?.challengesLeft).toBe(4);
+    expect(s.orangeStacks[0]?.challengesLeft).toBe(9); // 10 - 1
   });
 
   it('refuses with no challenges remaining', () => {
@@ -487,56 +487,56 @@ describe('time — soft cap semantics', () => {
 });
 
 describe('orange beacon choices', () => {
-  it('grants +1 choice regardless of tier — tier extends DURATION (5/10)', () => {
+  it('grants +1 choice regardless of tier — tier extends DURATION (10/15/20/25)', () => {
     const plain = takeBeacon(createRun(), { color: 'orange' });
     const vibrant = takeBeacon(createRun(), { color: 'orange', vibrant: true });
 
     expect(beaconChoices(plain)).toBe(BASE + 1);
     expect(beaconChoices(vibrant)).toBe(BASE + 1); // same bonus
-    expect(plain.orangeStacks[0]?.challengesLeft).toBe(5); // tier 0
-    expect(vibrant.orangeStacks[0]?.challengesLeft).toBe(10); // tier 1
+    expect(plain.orangeStacks[0]?.challengesLeft).toBe(10); // tier 0
+    expect(vibrant.orangeStacks[0]?.challengesLeft).toBe(15); // tier 1
   });
 
   /**
-   * A duration-5 orange must boost exactly 5 offers. Each offer follows a
-   * completion, so the stack stays active at challengesLeft 0 (its 5th and
-   * final boosted offer) and disappears on the 6th tick.
+   * A duration-10 orange must boost exactly 10 offers. Each offer follows a
+   * completion, so the stack stays active at challengesLeft 0 (its 10th and
+   * final boosted offer) and disappears on the 11th tick.
    */
-  it('boosts exactly D offers: still active after 5 ticks, gone after 6', () => {
-    const after5 = advance(takeBeacon(createRun(), { color: 'orange' }), 5);
-    expect(after5.orangeStacks).toHaveLength(1);
-    expect(beaconChoices(after5)).toBe(BASE + 1);
+  it('boosts exactly D offers: still active after 10 ticks, gone after 11', () => {
+    const after10 = advance(takeBeacon(createRun(), { color: 'orange' }), 10);
+    expect(after10.orangeStacks).toHaveLength(1);
+    expect(beaconChoices(after10)).toBe(BASE + 1);
 
-    const after6 = advance(after5, 1);
-    expect(after6.orangeStacks).toHaveLength(0);
-    expect(beaconChoices(after6)).toBe(BASE);
+    const after11 = advance(after10, 1);
+    expect(after11.orangeStacks).toHaveLength(0);
+    expect(beaconChoices(after11)).toBe(BASE);
   });
 
   /**
-   * User's worked example, verbatim (2026-07-22): orange at challenge 1
-   * (+1 for 5 challenges), vibrant orange at challenge 2 (+1 for 10) —
-   * "you will have 5 offered beacons for the next 5 chals", then it drops.
-   * A shared-timer model cannot produce this; independent expiries can.
+   * Two oranges stack additively but expire INDEPENDENTLY — the structural
+   * finding from the user's 2026-07-22 worked example. That example reported
+   * 5 simultaneous choices (base 3 + 1 + 1), which is what pinned the base at
+   * 3; its *durations* were later corrected to 10/15/20/25, but the stacking
+   * and expiry behaviour it demonstrated is unchanged.
    *
-   * The 5 is what pinned the base at 3: 3 + 1 + 1 = 5. It read as 4 while
-   * the base was wrongly 2, which is what surfaced the discrepancy.
+   * A shared-timer model cannot produce the stepwise drop below.
    */
-  it('reproduces the confirmed scenario: 5 offered beacons, then stepwise expiry', () => {
-    let s = takeBeacon(createRun(), { color: 'orange' }); // ch1: D=5
-    s = completeChallenge(s); // plain orange: 4 left
-    s = takeBeacon(s, { color: 'orange', vibrant: true }); // ch2: D=10
+  it('stacks two oranges to 5 choices, then steps down as each expires', () => {
+    let s = takeBeacon(createRun(), { color: 'orange' }); // ch1: D=10
+    s = completeChallenge(s); // plain orange: 9 left
+    s = takeBeacon(s, { color: 'orange', vibrant: true }); // ch2: D=15
 
-    expect(beaconChoices(s)).toBe(5); // base 3 + 1 + 1 — matches the report
+    expect(beaconChoices(s)).toBe(5); // base 3 + 1 + 1
 
-    s = advance(s, 4); // the 4 overlapped challenges (3-6)
-    expect(s.orangeStacks).toHaveLength(2); // plain at 0 = last boosted offer
+    s = advance(s, 9); // plain orange rides out its last boosted offer
+    expect(s.orangeStacks).toHaveLength(2);
     expect(beaconChoices(s)).toBe(5);
 
     s = advance(s, 1); // plain orange expires
     expect(s.orangeStacks).toHaveLength(1);
     expect(beaconChoices(s)).toBe(4);
 
-    s = advance(s, 6); // vibrant orange exhausts its 10 offers
+    s = advance(s, 6); // vibrant orange exhausts its 15 offers
     expect(s.orangeStacks).toHaveLength(0);
     expect(beaconChoices(s)).toBe(BASE);
   });

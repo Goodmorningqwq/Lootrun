@@ -128,21 +128,21 @@
     {
       "id": "orange",
       "name": "Orange Beacon",
-      "effect": "+1 Beacon Choice for the next 5 challenges (duration scales with tier; bonus never does).",
+      "effect": "+1 Beacon Choice for the next 10 challenges (duration scales with tier; the +1 bonus never does).",
       "notes": "Choice count is the input to nearly every other decision — more options strictly dominate. Likely the most robust early pick post-2.2.1, since it is unaffected by the boosting rework.",
       "noRepeatAfterOffer": false,
       "tiers": {
         "rarity": "medium",
         "extraChoices": 1,
         "durationChallenges": [
-          5,
           10,
           15,
+          20,
           25
         ],
-        "durationNote": "ALL FOUR user-confirmed 2026-07-22: 5 (normal), 10 (vibrant), 15 (vib aqua + normal = tier 2), 25 (vib aqua + vibrant = tier 3). Note the +10 jump at tier 3 — not a linear ladder. Beacon List tab (10/15/20/25) remains wrong except at tier 3."
+        "durationNote": "10/15/20/25 by tier — user-corrected 2026-07-24, and this matches the guide Beacon List exactly. Supersedes an earlier user figure of 5/10/15/25."
       },
-      "resolvedBy": "user, 2026-07-22 — full ladder measured, incl. the worked overlap example (4 challenges at +2 choices)."
+      "conflictHistory": "Recorded as 5/10/15/25 on 2026-07-22 from a worked example, which overrode the Beacon List. Corrected back on 2026-07-24 when the user restated 10/15/20/25 — now agreeing with the Beacon List, i.e. two independent sources. The structural findings from that earlier example (independent per-orange timers; base beacon choices = 3) came from the CHOICE COUNTS, not the durations, so they still stand."
     },
     {
       "id": "green",
