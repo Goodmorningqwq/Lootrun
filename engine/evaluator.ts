@@ -56,18 +56,55 @@ interface Phase {
   entryFrom?: string;
 }
 
-interface Strategy {
+export interface Strategy {
   id: string;
+  name?: string;
   goals: { runnable: Condition & { all?: Condition[] } };
   safety: SafetyRule[];
   phases: Phase[];
+}
+
+/**
+ * Structural check for an imported strategy. Not a full schema — just enough
+ * that a malformed paste is rejected with a message instead of crashing the
+ * advisor mid-run. Returns the typed strategy or a human-readable error.
+ */
+export function validateStrategy(obj: unknown): { ok: true; strategy: Strategy } | { ok: false; error: string } {
+  if (typeof obj !== 'object' || obj === null) return { ok: false, error: 'not an object' };
+  const s = obj as Record<string, unknown>;
+  if (typeof s.id !== 'string') return { ok: false, error: 'missing string "id"' };
+  if (!Array.isArray(s.phases) || s.phases.length === 0)
+    return { ok: false, error: '"phases" must be a non-empty array' };
+  if (typeof s.goals !== 'object' || s.goals === null || !('runnable' in s.goals))
+    return { ok: false, error: 'missing "goals.runnable"' };
+  if (!Array.isArray(s.safety)) return { ok: false, error: '"safety" must be an array' };
+  for (const [i, p] of (s.phases as unknown[]).entries()) {
+    if (typeof p !== 'object' || p === null || typeof (p as { id?: unknown }).id !== 'string')
+      return { ok: false, error: `phase[${i}] needs a string "id"` };
+  }
+  return { ok: true, strategy: obj as Strategy };
 }
 
 /* ------------------------------------------------------------------ */
 /* Data loading                                                        */
 /* ------------------------------------------------------------------ */
 
-const strategy = strategyJson as unknown as Strategy;
+export const DEFAULT_STRATEGY = strategyJson as unknown as Strategy;
+
+/**
+ * The strategy the advisor scores against. Swappable at runtime so the editor
+ * can apply a user-customised strategy without a rebuild. Module-level (like
+ * MISSIONS/ARCHETYPES) rather than threaded through every function — the app
+ * and the sim worker both call setStrategy after loading a custom one.
+ */
+let strategy: Strategy = DEFAULT_STRATEGY;
+
+export function setStrategy(s: Strategy): void {
+  strategy = s;
+}
+export function getStrategy(): Strategy {
+  return strategy;
+}
 
 interface MissionSpec {
   id: string;

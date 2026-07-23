@@ -12,6 +12,9 @@ import {
   evaluateOffer,
   isRunnable,
   testCondition,
+  validateStrategy,
+  setStrategy,
+  DEFAULT_STRATEGY,
 } from './evaluator';
 import type { RunState } from './types';
 
@@ -154,6 +157,40 @@ describe('mission offer evaluation', () => {
   it('every ranked mission carries a reason', () => {
     const a = evaluateMissionOffer(runAt(10), ['optimism', 'requiem', 'high_spirits']);
     for (const r of a.ranked) expect(r.reasons.length).toBeGreaterThan(0);
+  });
+});
+
+describe('strategy swapping and validation', () => {
+  it('rejects malformed strategies with a message', () => {
+    expect(validateStrategy(null).ok).toBe(false);
+    expect(validateStrategy({}).ok).toBe(false);
+    expect(validateStrategy({ id: 'x', goals: {}, safety: [], phases: [] }).ok).toBe(false); // empty phases
+    const bad = validateStrategy({ id: 'x' });
+    expect(bad.ok).toBe(false);
+    if (!bad.ok) expect(bad.error).toMatch(/phases/i);
+  });
+
+  it('accepts the default strategy', () => {
+    expect(validateStrategy(DEFAULT_STRATEGY).ok).toBe(true);
+  });
+
+  it('a swapped strategy changes advice, and resets back', () => {
+    const before = evaluateOffer(runAt(1), [{ color: 'orange' }, { color: 'blue' }]);
+    expect(before.ranked[0]?.color).toBe('orange'); // opening: orange #1
+
+    // Minimal strategy that reverses the opening to prefer blue.
+    setStrategy({
+      id: 'test-blue-first',
+      goals: { runnable: { all: [] } },
+      safety: [],
+      phases: [{ id: 'opening', when: { path: 'challenge', gte: 0 }, beaconPriority: ['blue', 'orange'] }],
+    });
+    const after = evaluateOffer(runAt(1), [{ color: 'orange' }, { color: 'blue' }]);
+    expect(after.ranked[0]?.color).toBe('blue');
+
+    setStrategy(DEFAULT_STRATEGY);
+    const restored = evaluateOffer(runAt(1), [{ color: 'orange' }, { color: 'blue' }]);
+    expect(restored.ranked[0]?.color).toBe('orange');
   });
 });
 

@@ -6,6 +6,7 @@
  * no typing, and the advice must always show its reasoning.
  */
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { BEACON_COLORS, type BeaconColor, type OrangeStack, type Tier } from '../engine/types';
 import {
@@ -370,6 +371,7 @@ export default function Tracker() {
     addTrial, removeTrial, adjustTime,
     addBoon, removeBoonAt, labelBoon, setRunSetup,
     missionOffer, dropMission, toggleFulfilled, setMissionObjective, prompt, dismissPrompt,
+    strategy, strategyCustomized,
   } = useTracker();
   const [showPerks, setShowPerks] = useState(false);
 
@@ -391,14 +393,17 @@ export default function Tracker() {
     clearSim();
   }, [offer, run.challengesCompleted, clearSim]);
 
+  // `strategy` is in the deps because evaluateOffer/activePhases read the
+  // evaluator's module strategy, which applyStrategy swaps — advice must
+  // recompute when the user edits the strategy.
   const advice = useMemo(
     () => (offer.length > 0 ? evaluateOffer(run, offer) : null),
-    [run, offer],
+    [run, offer, strategy],
   );
   const phase = useMemo(() => {
     const matched = activePhases(run);
     return matched[matched.length - 1]?.id ?? 'opening';
-  }, [run]);
+  }, [run, strategy]);
 
   const choices = beaconChoices(run);
 
@@ -498,6 +503,13 @@ export default function Tracker() {
           >
             perks {showPerks ? '▲' : '▼'}
           </button>
+          <Link
+            href="/editor"
+            className="rounded bg-zinc-800 px-3 py-1 text-sm text-zinc-300 hover:bg-zinc-700"
+            title="visualise and edit the advisor's strategy"
+          >
+            Strategy{strategyCustomized ? ' •' : ''}
+          </Link>
           <button onClick={undo} className="rounded bg-zinc-800 px-3 py-1 text-sm hover:bg-zinc-700">
             Undo
           </button>
@@ -718,7 +730,7 @@ export default function Tracker() {
           <div className="mb-3 flex flex-wrap items-center gap-3">
             <h2 className="font-semibold">Advice</h2>
             <button
-              onClick={() => runSim(run, offer, { secondsPerChallenge: secsPerChallenge })}
+              onClick={() => runSim(run, offer, { secondsPerChallenge: secsPerChallenge }, strategy)}
               disabled={simRunning}
               className="rounded bg-indigo-700 px-3 py-1 text-sm hover:bg-indigo-600 disabled:opacity-50"
               title="Play this run out hundreds of times per option"

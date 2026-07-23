@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Forecast, SimConfig } from '../engine/simulator';
 import { DEFAULT_SIM } from '../engine/simulator';
+import type { Strategy } from '../engine/evaluator';
 import type { OfferedBeacon, RunState } from '../engine/types';
 
 export function useForecast() {
@@ -36,13 +37,18 @@ export function useForecast() {
   }, []);
 
   const run = useCallback(
-    (state: RunState, offer: OfferedBeacon[], config?: Partial<SimConfig>) => {
+    (
+      state: RunState,
+      offer: OfferedBeacon[],
+      config?: Partial<SimConfig>,
+      strategy?: Strategy,
+    ) => {
       if (!workerRef.current || offer.length === 0) return;
       const id = ++nextId.current;
       latest.current = id;
       setRunning(true);
       setError(null);
-      workerRef.current.postMessage({ id, state, offer, config });
+      workerRef.current.postMessage({ id, state, offer, config, strategy });
     },
     [],
   );

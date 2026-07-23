@@ -24,6 +24,12 @@ import {
   useReroll,
 } from '../engine/engine';
 import { BEACONS } from '../engine/data';
+import {
+  DEFAULT_STRATEGY,
+  setStrategy,
+  validateStrategy,
+  type Strategy,
+} from '../engine/evaluator';
 import type { BeaconColor, MissionSlot, OfferedBeacon, RunState } from '../engine/types';
 
 /** Trials whose penalty maps onto an engine behaviour flag. */
@@ -84,6 +90,14 @@ interface TrackerStore {
   removeTrial: (id: string) => void;
   setFlag: (flag: keyof RunState['flags'], value: boolean) => void;
   adjustTime: (seconds: number) => void;
+
+  /** The strategy the advisor scores against (editable via the editor). */
+  strategy: Strategy;
+  /** True once the strategy has been edited/imported away from the default. */
+  strategyCustomized: boolean;
+  /** Apply an imported/edited strategy. Returns an error string if invalid. */
+  applyStrategy: (obj: unknown) => string | null;
+  resetStrategy: () => void;
 }
 
 const current = (h: RunState[]): RunState => h[h.length - 1] as RunState;
@@ -265,6 +279,22 @@ export const useTracker = create<TrackerStore>()(
         ...s,
         timeRemaining: Math.max(0, Math.min(900, s.timeRemaining + seconds)),
       })),
+
+    strategy: DEFAULT_STRATEGY,
+    strategyCustomized: false,
+
+    applyStrategy: (obj) => {
+      const result = validateStrategy(obj);
+      if (!result.ok) return result.error;
+      setStrategy(result.strategy); // keep the evaluator module in sync
+      set({ strategy: result.strategy, strategyCustomized: true });
+      return null;
+    },
+
+    resetStrategy: () => {
+      setStrategy(DEFAULT_STRATEGY);
+      set({ strategy: DEFAULT_STRATEGY, strategyCustomized: false });
+    },
   };
     },
     {
@@ -297,7 +327,22 @@ export const useTracker = create<TrackerStore>()(
         }
         return p;
       },
-      partialize: (s) => ({ history: s.history, offer: s.offer }),
+      partialize: (s) => ({
+        history: s.history,
+        offer: s.offer,
+        strategy: s.strategy,
+        strategyCustomized: s.strategyCustomized,
+      }),
+      // A persisted custom strategy must be pushed into the evaluator module on
+      // load, or advice would score against the default until the next edit.
+      onRehydrateStorage: () => (state) => {
+        if (!state?.strategy) return;
+        setStrategy(state.strategy);
+        // Derive the flag rather than trusting it: a strategy persisted before
+        // the flag existed would otherwise read as "default" while custom.
+        state.strategyCustomized =
+          JSON.stringify(state.strategy) !== JSON.stringify(DEFAULT_STRATEGY);
+      },
     },
   ),
 );
