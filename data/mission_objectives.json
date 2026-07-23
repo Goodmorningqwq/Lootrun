@@ -11,21 +11,29 @@
     "confirmedBy": "user, 2026-07-23 (\"you don't instantly get the effect... you need to do something to activate it, such as open chest, get boons or curse\")"
   },
 
+  "resolved_2026_07_23": {
+    "activationEqualsUnblock": "Completing the objective activates the mission AND unblocks grey — ONE event. In the app: ticking the mission's 'done' box does both.",
+    "noEffectBeforeActivation": "A mission has NO effect until its objective is completed. So the advisor must NOT bias beacons toward an un-activated mission's archetype — before activation it should instead push the beacon that COMPLETES the objective.",
+    "scalingIgnored": "Objectives scale in quantity (e.g. open 3 chests early, more later) but we do not track the number — just recommend the objective's beacon/action until the user ticks it done.",
+    "gainTimeIsPassive": "The gain_time objective needs no special beacon — ordinary challenges already grant time, so it completes on its own. Do not push green for it.",
+    "darkGreyExcluded": "darkGrey can only be taken ONCE per run and is saved for a max-power (rainbow+aqua) play, so it must NEVER be recommended to complete a mission objective, even though it grants pulls/curses."
+  },
+
   "objectiveTypes": [
     {
       "id": "gain_time",
       "label": "Gain time",
       "example": "Add +Ns to your timer",
-      "advancedBy": ["green"],
-      "alsoHelps": ["stasis", "backup_beat"],
-      "note": "Green Beacon is the direct source. Blocked while Chronotrigger (no time gain) is active."
+      "advancedBy": [],
+      "passive": true,
+      "note": "Completes on its own — normal challenges grant time. No special beacon needed; do not push green for it."
     },
     {
       "id": "earn_pulls",
-      "label": "Earn End Reward Pulls",
+      "label": "Earn Reward Pulls",
       "example": "Gain N Reward Pulls",
-      "advancedBy": ["purple", "darkGrey"],
-      "note": "Purple and darkGrey grant pulls directly; high_roller/knife_edge/many pull missions also count."
+      "advancedBy": ["purple"],
+      "note": "Purple grants pulls. darkGrey also would, but is excluded (once-per-run, saved for max power)."
     },
     {
       "id": "open_chests",
@@ -33,23 +41,21 @@
       "example": "Open N chests",
       "advancedBy": ["yellow"],
       "alsoHelps": ["materialism"],
-      "note": "Yellow spawns flying chests; Materialism adds 2/challenge. Environmental chests count too (see Chronokinesis chest rules)."
+      "note": "Yellow spawns flying chests; Materialism adds 2/challenge. Environmental chests count too."
     },
     {
       "id": "get_boons",
       "label": "Get Boons",
       "example": "Gain N Boons",
       "advancedBy": ["blue"],
-      "alsoHelps": ["hoarder", "jesters_trick", "complete_chaos"],
-      "note": "Blue is the direct boon source; boon-generator missions also count once online."
+      "note": "Blue is the direct boon source."
     },
     {
       "id": "get_curses",
       "label": "Get Curses",
       "example": "Gain N Curses",
-      "advancedBy": ["purple", "darkGrey"],
-      "alsoHelps": ["porphyrophobia"],
-      "note": "Purple and darkGrey grant curses. Purple therefore advances BOTH earn_pulls AND get_curses — doubly good when either is the active objective."
+      "advancedBy": ["purple"],
+      "note": "Purple grants curses (and pulls) — so purple advances both earn_pulls AND get_curses. darkGrey excluded."
     },
     {
       "id": "offered_beacons",
@@ -57,15 +63,23 @@
       "example": "Be offered N Beacons",
       "advancedBy": ["orange"],
       "alsoHelps": ["pink", "gourmand"],
-      "note": "Orange raises beacon choices (more beacons offered per challenge); rerolls (pink/Gourmand) also increase total beacons seen."
+      "note": "Orange raises beacon choices; rerolls (pink/Gourmand) increase total beacons seen."
+    },
+    {
+      "id": "complete_challenges",
+      "label": "Complete challenges",
+      "example": "Complete N challenges",
+      "advancedBy": [],
+      "passive": true,
+      "confirmedBy": "user, 2026-07-23",
+      "note": "Completes on its own by playing — any beacon that leads into a challenge advances it. No special beacon needed."
     }
   ],
 
-  "incomplete": "The wiki says objectives 'may include' these six, so the list may not be exhaustive. Candidates to confirm in-game: complete challenges, kill mobs, use beacon rerolls. Also unconfirmed: the exact quantity per objective (does it scale with challenge number?), and whether completing the objective is what unblocks grey or whether that is a separate 'fulfilled' state.",
+  "removedCandidate": "kill_mobs — user confirms this is NOT an objective type (2026-07-23).",
 
-  "openQuestions": [
-    "Are there objective types beyond these six? (kill mobs, complete challenges?)",
-    "Does the required quantity scale (e.g. 'open 3 chests' early vs 'open 8' late)?",
-    "Is 'objective complete' the same event as 'mission fulfilled / grey unblocks', or two steps?"
-  ]
+  "darkGreyStrategy": {
+    "note": "Not an objective concern, but recorded from the same feedback.",
+    "rule": "darkGrey is once-per-run. Take it at MAX power (rainbow + aqua stacked). On an Opal Offering run, WAIT (bank boons first, since darkGrey's curses trigger Opal which consumes boons). Otherwise take it when offered at max power."
+  }
 }

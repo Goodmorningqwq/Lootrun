@@ -75,10 +75,11 @@ interface TrackerStore {
   missionOffer: string[];
   setMissionOffer: (ids: string[]) => void;
   toggleMissionOffer: (id: string) => void;
-  takeMissionFromOffer: (id: string) => void;
+  takeMissionFromOffer: (id: string, objective?: string) => void;
   addMission: (id: string) => void;
   dropMission: (id: string) => void;
   toggleFulfilled: (id: string) => void;
+  setMissionObjective: (id: string, objective: string) => void;
   addTrial: (id: string) => void;
   removeTrial: (id: string) => void;
   setFlag: (flag: keyof RunState['flags'], value: boolean) => void;
@@ -214,8 +215,14 @@ export const useTracker = create<TrackerStore>()(
           : [...s.missionOffer, id],
       })),
 
-    takeMissionFromOffer: (id) =>
-      tryPush((s) => takeMission(s, id), { missionOffer: [], prompt: null }),
+    takeMissionFromOffer: (id, objective) =>
+      tryPush((s) => takeMission(s, id, objective), { missionOffer: [], prompt: null }),
+
+    setMissionObjective: (id, objective) =>
+      tryPush((s) => ({
+        ...s,
+        missions: s.missions.map((m) => (m.id === id ? { ...m, objective } : m)),
+      })),
 
     addMission: (id) => tryPush((s) => takeMission(s, id)),
 

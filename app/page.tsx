@@ -32,6 +32,7 @@ import {
 import missionsJson from '../data/missions.json';
 import trialsJson from '../data/trials.json';
 import boonsJson from '../data/boons.json';
+import objectivesJson from '../data/mission_objectives.json';
 import { useCurrentRun, useTracker } from './store';
 import { useForecast } from './useForecast';
 
@@ -40,6 +41,11 @@ const MISSIONS = (missionsJson as { missions: Array<{ id: string; name: string; 
 const TRIALS = (trialsJson as { trials: Array<{ id: string; name: string; requirement: string | null; guideTier?: string }> })
   .trials.filter((t) => t.requirement);
 const BOONS = (boonsJson as { boons: Array<{ id: string; name: string; kind: string }> }).boons;
+const OBJECTIVES = (
+  objectivesJson as { objectiveTypes: Array<{ id: string; label: string; passive?: boolean }> }
+).objectiveTypes;
+const objectiveLabel = (id?: string) =>
+  OBJECTIVES.find((o) => o.id === id)?.label ?? id ?? '—';
 
 const CHIP: Record<BeaconColor, string> = {
   blue: 'bg-blue-600 text-white',
@@ -199,6 +205,43 @@ function MissionPicker() {
     () => (missionOffer.length > 0 ? evaluateMissionOffer(run, missionOffer) : null),
     [run, missionOffer],
   );
+  // After choosing which mission to take, pick the activation objective it rolled.
+  const [pendingTake, setPendingTake] = useState<{ id: string; name: string } | null>(null);
+
+  if (pendingTake) {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-zinc-300">
+          <b>{pendingTake.name}</b> — which activation objective did it give you? The mission has
+          no effect until this is done; the advisor will steer you to complete it.
+        </p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {OBJECTIVES.map((o) => (
+            <button
+              key={o.id}
+              onClick={() => {
+                takeMissionFromOffer(pendingTake.id, o.id);
+                setPendingTake(null);
+              }}
+              className="rounded bg-zinc-800 px-2 py-1.5 text-left text-xs hover:bg-cyan-900"
+            >
+              {o.label}
+              {o.passive && <span className="text-zinc-500"> (auto)</span>}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => {
+            takeMissionFromOffer(pendingTake.id);
+            setPendingTake(null);
+          }}
+          className="w-full rounded bg-zinc-700 px-3 py-1.5 text-xs hover:bg-zinc-600"
+        >
+          skip — I&apos;ll set the objective later
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -260,7 +303,7 @@ function MissionPicker() {
                   </span>
                   <span className="text-[11px] text-zinc-500">score {r.score}</span>
                   <button
-                    onClick={() => takeMissionFromOffer(r.id)}
+                    onClick={() => setPendingTake({ id: r.id, name: r.name })}
                     className="ml-auto rounded bg-green-700 px-2 py-0.5 text-xs hover:bg-green-600"
                   >
                     Take
@@ -326,7 +369,7 @@ export default function Tracker() {
     markDeath, markFailedChallenge, undo, reset, lastError,
     addTrial, removeTrial, adjustTime,
     addBoon, removeBoonAt, labelBoon, setRunSetup,
-    missionOffer, dropMission, toggleFulfilled, prompt, dismissPrompt,
+    missionOffer, dropMission, toggleFulfilled, setMissionObjective, prompt, dismissPrompt,
   } = useTracker();
   const [showPerks, setShowPerks] = useState(false);
 
@@ -866,19 +909,24 @@ export default function Tracker() {
           <h2 className="mb-1 font-semibold">Missions ({run.missions.length}/3)</h2>
           {pending && (
             <p className="mb-2 text-xs text-amber-400">
-              ⏳ {MISSIONS.find((m) => m.id === pending.id)?.name} is still processing —
-              grey beacons will not reappear until it is fulfilled.
+              ⏳ {MISSIONS.find((m) => m.id === pending.id)?.name} not yet active
+              {pending.objective
+                ? ` — advisor is steering toward its "${objectiveLabel(pending.objective)}" objective. Tick it when done.`
+                : ' — pick its activation objective below so the advisor can help.'}
             </p>
           )}
-          <div className="mb-2 flex flex-wrap gap-1.5">
+          <div className="mb-2 space-y-1.5">
             {run.missions.map((m) => (
-              <span
+              <div
                 key={m.id}
-                className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs ${
-                  m.fulfilled ? 'bg-zinc-700' : 'bg-amber-900/70 ring-1 ring-amber-600'
+                className={`flex flex-wrap items-center gap-2 rounded px-2 py-1.5 text-xs ${
+                  m.fulfilled ? 'bg-zinc-800' : 'bg-amber-900/50 ring-1 ring-amber-600'
                 }`}
               >
-                <label className="flex cursor-pointer items-center gap-1" title="fulfilled?">
+                <label
+                  className="flex cursor-pointer items-center gap-1.5 font-medium"
+                  title={m.fulfilled ? 'activated' : 'tick when the objective is done → activates'}
+                >
                   <input
                     type="checkbox"
                     checked={m.fulfilled}
@@ -886,9 +934,35 @@ export default function Tracker() {
                   />
                   {MISSIONS.find((x) => x.id === m.id)?.name ?? m.id}
                 </label>
-                <button onClick={() => dropMission(m.id)} className="hover:text-red-400"
-                  title="remove">✕</button>
-              </span>
+                {m.fulfilled ? (
+                  <span className="rounded bg-green-900/70 px-1.5 py-0.5 text-[10px] text-green-200">
+                    ✓ active
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-[11px] text-amber-200">
+                    objective:
+                    <select
+                      value={m.objective ?? ''}
+                      onChange={(e) => setMissionObjective(m.id, e.target.value)}
+                      className="rounded bg-zinc-900 px-1 py-0.5 text-amber-100"
+                    >
+                      <option value="">— pick —</option>
+                      {OBJECTIVES.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </span>
+                )}
+                <button
+                  onClick={() => dropMission(m.id)}
+                  className="ml-auto text-zinc-500 hover:text-red-400"
+                  title="remove"
+                >
+                  ✕
+                </button>
+              </div>
             ))}
             {run.missions.length === 0 && (
               <span className="text-xs text-zinc-600">none yet</span>

@@ -13,6 +13,7 @@
 import strategyJson from '../strategies/default.json';
 import missionsJson from '../data/missions.json';
 import archetypesJson from '../data/archetypes.json';
+import objectivesJson from '../data/mission_objectives.json';
 import type { BeaconColor, OfferedBeacon, RunState } from './types';
 import { beaconChoices, pendingMission } from './engine';
 import { RUN_CONSTANTS } from './data';
@@ -107,9 +108,16 @@ interface Archetype {
 /**
  * The archetype a run has committed to, by best fit of held mission cores.
  * Shared by beacon and mission scoring so both steer off the same plan.
+ *
+ * `activatedOnly` restricts to missions whose objective is complete — used for
+ * BEACON bias, because an un-activated mission has no effect yet, so its
+ * archetype must not steer beacon priority. Mission-pick advice leaves it false
+ * (you plan toward an archetype from every mission you hold, activated or not).
  */
-export function committedArchetype(state: RunState): Archetype | null {
-  const held = new Set(state.missions.map((m) => m.id));
+export function committedArchetype(state: RunState, activatedOnly = false): Archetype | null {
+  const held = new Set(
+    state.missions.filter((m) => !activatedOnly || m.fulfilled).map((m) => m.id),
+  );
   let best: { a: Archetype; hits: number } | null = null;
   for (const a of ARCHETYPES) {
     if (a.id === 'universal') continue;
@@ -120,6 +128,19 @@ export function committedArchetype(state: RunState): Archetype | null {
 }
 
 const ARCHETYPES = (archetypesJson as unknown as { archetypes: Archetype[] }).archetypes;
+
+interface ObjectiveType {
+  id: string;
+  label: string;
+  advancedBy: BeaconColor[];
+  passive?: boolean;
+}
+export const OBJECTIVE_TYPES = (
+  objectivesJson as unknown as { objectiveTypes: ObjectiveType[] }
+).objectiveTypes;
+const OBJECTIVE_BY_ID: Record<string, ObjectiveType> = Object.fromEntries(
+  OBJECTIVE_TYPES.map((o) => [o.id, o]),
+);
 
 /* ------------------------------------------------------------------ */
 /* Condition evaluation                                                */
@@ -419,9 +440,18 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
     activeSafety.push(rule);
   }
 
-  // The run's committed plan steers beacon priority, not just missions.
-  const archetype = committedArchetype(state);
+  // Only ACTIVATED missions steer beacon priority — an un-activated mission
+  // has no effect yet (point 5 of the playtest feedback).
+  const archetype = committedArchetype(state, true);
   const bias = archetype?.beaconBias ?? {};
+
+  // The un-activated mission (if any) needs its objective completed before it
+  // does anything. Push the beacon that advances that objective instead.
+  const armingMission = pendingMission(state);
+  const armingObjective = armingMission?.objective
+    ? OBJECTIVE_BY_ID[armingMission.objective]
+    : undefined;
+  const armingBeacons = new Set(armingObjective?.advancedBy ?? []);
 
   // "Get all missions and rainbow as early as possible" (playtester request):
   // grey is urgent while mission slots remain and its window is open; rainbow
@@ -445,7 +475,17 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
       reasons.push(`Phase "${priorityPhase?.id}": unlisted — neutral fallback`);
     }
 
-    // --- archetype beacon bias ----------------------------------------
+    // --- activate the pending mission ---------------------------------
+    // Completing its objective is high priority: the mission is dead weight
+    // and grey is blocked until it activates.
+    if (armingBeacons.has(b.color)) {
+      score += 50;
+      reasons.push(
+        `Activates ${MISSIONS[armingMission!.id]?.name ?? armingMission!.id}: completes its "${armingObjective!.label}" objective`,
+      );
+    }
+
+    // --- archetype beacon bias (activated missions only) --------------
     const biasVal = bias[b.color];
     if (biasVal) {
       score += biasVal;

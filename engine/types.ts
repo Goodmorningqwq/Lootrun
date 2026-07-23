@@ -44,7 +44,14 @@ export type CurseType = 'generic' | 'radiance';
  */
 export interface MissionSlot {
   id: string;
+  /**
+   * True once the mission's randomized ACTIVATION objective is complete. Until
+   * then the mission has NO effect and grey stays blocked. Ticking this in the
+   * UI activates the mission and unblocks grey — one event.
+   */
   fulfilled: boolean;
+  /** The objective type that must be completed to activate (data/mission_objectives). */
+  objective?: string;
 }
 
 /** One orange beacon's contribution, with its own expiry. */

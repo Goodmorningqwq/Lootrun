@@ -214,6 +214,68 @@ describe('archetype-aware beacon priority (playtester feedback)', () => {
   });
 });
 
+describe('mission activation and objectives (playtest feedback)', () => {
+  // Held but NOT activated: fulfilled: false, with an objective to complete.
+  const arming = (id: string, objective: string) => [{ id, fulfilled: false, objective }];
+
+  it('an un-activated mission does NOT bias beacons toward its archetype', () => {
+    // Ostinato held but not activated → blue should not get the +35 combo bias.
+    const a = evaluateOffer(runAt(15, { missions: arming('ostinato', 'open_chests') }), [
+      { color: 'blue' },
+      { color: 'yellow' },
+    ]);
+    const blue = a.ranked.find((r) => r.color === 'blue')!;
+    expect(blue.reasons.join(' ')).not.toMatch(/run combo wants blue/i);
+  });
+
+  it('instead pushes the beacon that completes the objective', () => {
+    // open_chests objective → yellow gets the activation boost.
+    const a = evaluateOffer(runAt(15, { missions: arming('ostinato', 'open_chests') }), [
+      { color: 'blue' },
+      { color: 'yellow' },
+    ]);
+    expect(a.ranked[0]?.color).toBe('yellow');
+    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/Activates .*Ostinato.*Open chests/i);
+  });
+
+  it('get_curses objective routes to purple', () => {
+    const a = evaluateOffer(runAt(15, { missions: arming('equilibrium', 'get_curses') }), [
+      { color: 'purple' },
+      { color: 'blue' },
+    ]);
+    expect(a.ranked[0]?.color).toBe('purple');
+  });
+
+  it('passive objectives (gain_time) push no beacon', () => {
+    const a = evaluateOffer(runAt(15, { missions: arming('stasis', 'gain_time') }), [
+      { color: 'green' },
+      { color: 'blue' },
+    ]);
+    const green = a.ranked.find((r) => r.color === 'green')!;
+    expect(green.reasons.join(' ')).not.toMatch(/Activates/i);
+  });
+
+  it('once activated, the archetype bias applies again', () => {
+    const a = evaluateOffer(
+      runAt(15, { missions: [{ id: 'ostinato', fulfilled: true, objective: 'open_chests' }] }),
+      [{ color: 'blue' }, { color: 'yellow' }],
+    );
+    expect(a.ranked[0]?.color).toBe('blue');
+    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/run combo wants blue/i);
+  });
+
+  it('never recommends darkGrey to complete an objective', () => {
+    // get_curses would be advanced by darkGrey mechanically, but it is excluded.
+    const a = evaluateOffer(
+      runAt(15, { missions: arming('equilibrium', 'get_curses'), rank: 'grandmaster' }),
+      [{ color: 'darkGrey' }, { color: 'purple' }],
+    );
+    const dg = a.ranked.find((r) => r.color === 'darkGrey')!;
+    expect(dg.reasons.join(' ')).not.toMatch(/Activates/i);
+    expect(a.ranked[0]?.color).toBe('purple');
+  });
+});
+
 describe('offer evaluation — hand-checked scenarios', () => {
   it('opening: orange beats blue and red', () => {
     const advice = evaluateOffer(runAt(1), [
