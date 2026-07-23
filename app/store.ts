@@ -33,13 +33,25 @@ const TRIAL_FLAGS: Partial<Record<string, keyof RunState['flags']>> = {
   ultimate_sacrifice: 'boonsDisabled',
 };
 
+/**
+ * A follow-up the game demands right after a beacon: a blue makes you choose a
+ * boon, a grey makes you choose a mission. Drives the modal so entry happens
+ * where the decision does, instead of in a panel the user forgets to fill.
+ */
+export type Prompt =
+  | { kind: 'boon' }
+  | { kind: 'mission'; source: 'grey' | 'forced' }
+  | null;
+
 interface TrackerStore {
   history: RunState[];
   offer: OfferedBeacon[];
   lastError: string | null;
+  prompt: Prompt;
 
   reset: () => void;
   undo: () => void;
+  dismissPrompt: () => void;
   setRank: (rank: string) => void;
   /** Rank/daily-bonus changes re-derive the opening state, so they only make
    *  sense before the run starts — the UI hides them after challenge 0. */
@@ -95,6 +107,7 @@ export const useTracker = create<TrackerStore>()(
     history: [createRun()],
     offer: [],
     lastError: null,
+    prompt: null,
 
     // New run keeps the player's rank — it's a property of the player, not the run.
     reset: () =>
@@ -102,6 +115,7 @@ export const useTracker = create<TrackerStore>()(
         history: [createRun({ rank: current(s.history).rank })],
         offer: [],
         lastError: null,
+        prompt: null,
       })),
 
     setRank: (rank) => tryPush((s) => ({ ...s, rank })),
@@ -123,6 +137,7 @@ export const useTracker = create<TrackerStore>()(
       set((s) => ({
         history: s.history.length > 1 ? s.history.slice(0, -1) : s.history,
         lastError: null,
+        prompt: null,
       })),
 
     toggleOffer: (color) =>
@@ -144,6 +159,14 @@ export const useTracker = create<TrackerStore>()(
       const { offer } = get();
       const chosen = offer[index];
       if (!chosen) return;
+      // Blue -> boon prompt; grey -> mission prompt. Both are decisions the
+      // game forces immediately after the beacon, so surface them right away.
+      const prompt: Prompt =
+        chosen.color === 'blue'
+          ? { kind: 'boon' }
+          : chosen.color === 'grey'
+            ? { kind: 'mission', source: 'grey' }
+            : null;
       tryPush(
         (s) => {
           let next = completeChallenge(
@@ -158,9 +181,11 @@ export const useTracker = create<TrackerStore>()(
           }
           return next;
         },
-        { offer: [] },
+        { offer: [], prompt },
       );
     },
+
+    dismissPrompt: () => set({ prompt: null }),
 
     reroll: () => {
       const hasGourmand = current(get().history).missions.some((m) => m.id === 'gourmand');
@@ -189,7 +214,8 @@ export const useTracker = create<TrackerStore>()(
           : [...s.missionOffer, id],
       })),
 
-    takeMissionFromOffer: (id) => tryPush((s) => takeMission(s, id), { missionOffer: [] }),
+    takeMissionFromOffer: (id) =>
+      tryPush((s) => takeMission(s, id), { missionOffer: [], prompt: null }),
 
     addMission: (id) => tryPush((s) => takeMission(s, id)),
 

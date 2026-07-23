@@ -6,7 +6,7 @@
  * no typing, and the advice must always show its reasoning.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { BEACON_COLORS, type BeaconColor, type OrangeStack, type Tier } from '../engine/types';
 import {
   beaconChoices,
@@ -21,7 +21,6 @@ import { activePhases, evaluateMissionOffer, evaluateOffer } from '../engine/eva
 import {
   BEACONS,
   RANKS,
-  RUN_CONSTANTS,
   baseChoicesFor,
   boonChoicesFor,
   dailyRewardRerollFor,
@@ -147,6 +146,179 @@ function Stat({ label, value, accent }: { label: string; value: string | number;
   );
 }
 
+/** Centered overlay. Click the backdrop or ✕ to dismiss. */
+function Modal({
+  title,
+  subtitle,
+  onClose,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="mt-12 w-full max-w-lg rounded-xl border border-zinc-600 bg-zinc-900 p-4 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-2 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-semibold">{title}</h2>
+            {subtitle && <p className="mt-0.5 text-xs text-zinc-400">{subtitle}</p>}
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded px-2 py-0.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+            title="close"
+          >
+            ✕
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Grey/forced mission entry: type the offered missions, get them ranked, take
+ * one. Self-contained (reads the store) so it can appear both in the modal and
+ * in the editable panel below.
+ */
+function MissionPicker() {
+  const run = useCurrentRun();
+  const { missionOffer, toggleMissionOffer, setMissionOffer, takeMissionFromOffer } =
+    useTracker();
+  const advice = useMemo(
+    () => (missionOffer.length > 0 ? evaluateMissionOffer(run, missionOffer) : null),
+    [run, missionOffer],
+  );
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <div className="mb-1 flex items-center justify-between">
+          <span className="text-xs uppercase tracking-wide text-zinc-500">
+            Which missions are offered? ({missionOffer.length} entered)
+          </span>
+          {missionOffer.length > 0 && (
+            <button
+              onClick={() => setMissionOffer([])}
+              className="text-xs text-zinc-500 hover:text-zinc-300"
+            >
+              clear
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {MISSIONS.filter((m) => !run.missions.some((h) => h.id === m.id)).map((m) => (
+            <button
+              key={m.id}
+              onClick={() => toggleMissionOffer(m.id)}
+              title={m.effect ?? ''}
+              className={`rounded px-1.5 py-0.5 text-[11px] ${
+                missionOffer.includes(m.id)
+                  ? 'bg-cyan-800 text-cyan-100 ring-1 ring-cyan-400'
+                  : 'bg-zinc-800 hover:bg-zinc-700'
+              }`}
+            >
+              {m.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {advice && (
+        <div className="space-y-2">
+          {advice.committed && (
+            <p className="text-xs text-cyan-300">
+              Committed: {advice.committed.name} ({advice.committed.progress})
+            </p>
+          )}
+          {advice.missingRoles.length > 0 && (
+            <p className="text-xs text-amber-400">
+              Still missing: {advice.missingRoles.join(', ')}
+            </p>
+          )}
+          <ol className="space-y-1.5">
+            {advice.ranked.map((r, i) => (
+              <li
+                key={r.id}
+                className={`rounded-lg border p-2 ${
+                  i === 0 ? 'border-green-700 bg-green-950/40' : 'border-zinc-800'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold">
+                    #{i + 1} {r.name}
+                  </span>
+                  <span className="text-[11px] text-zinc-500">score {r.score}</span>
+                  <button
+                    onClick={() => takeMissionFromOffer(r.id)}
+                    className="ml-auto rounded bg-green-700 px-2 py-0.5 text-xs hover:bg-green-600"
+                  >
+                    Take
+                  </button>
+                </div>
+                <p className="mt-0.5 text-[11px] text-zinc-500">{r.effect}</p>
+                <ul className="mt-1 space-y-0.5 text-[11px] text-zinc-400">
+                  {r.reasons.map((why) => (
+                    <li key={why}>• {why}</li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Boon prompt shown after a blue: the boon is already counted; name it or move on. */
+function BoonNamer({ onDone }: { onDone: () => void }) {
+  const run = useCurrentRun();
+  const { labelBoon, addBoon } = useTracker();
+  const lastUnknown = run.boons.map((b) => b.id).lastIndexOf('unknown');
+  const potency = lastUnknown >= 0 ? Math.round((run.boons[lastUnknown]?.potency ?? 1) * 100) : 100;
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-zinc-300">
+        Boon counted automatically at <b>{potency}%</b> potency. Naming it is optional — only
+        Ostinato and boon-pick advice use the specific type.
+      </p>
+      <div className="grid max-h-64 grid-cols-2 gap-1 overflow-y-auto">
+        {BOONS.map((b) => (
+          <button
+            key={b.id}
+            onClick={() => {
+              if (lastUnknown >= 0) labelBoon(lastUnknown, b.id);
+              else addBoon(b.id);
+              onDone();
+            }}
+            className="rounded bg-zinc-800 px-2 py-1 text-left text-xs hover:bg-blue-900"
+          >
+            <span className="text-zinc-500">[{b.kind}]</span> {b.name}
+          </button>
+        ))}
+      </div>
+      <button
+        onClick={onDone}
+        className="w-full rounded bg-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-600"
+      >
+        Leave unnamed
+      </button>
+    </div>
+  );
+}
+
 export default function Tracker() {
   const run = useCurrentRun();
   const {
@@ -154,13 +326,18 @@ export default function Tracker() {
     markDeath, markFailedChallenge, undo, reset, lastError,
     addTrial, removeTrial, adjustTime,
     addBoon, removeBoonAt, labelBoon, setRunSetup,
-    missionOffer, setMissionOffer, toggleMissionOffer, takeMissionFromOffer,
-    dropMission, toggleFulfilled,
+    missionOffer, dropMission, toggleFulfilled, prompt, dismissPrompt,
   } = useTracker();
   const [showPerks, setShowPerks] = useState(false);
 
   const pending = pendingMission(run);
   const missionDue = firstMissionDue(run);
+
+  // Mission modal is dismissable, but reopens when a new trigger appears.
+  const [missionModalClosed, setMissionModalClosed] = useState(false);
+  useEffect(() => {
+    setMissionModalClosed(false);
+  }, [prompt, run.missions.length]);
 
   const { forecast, running: simRunning, error: simError, run: runSim, clear: clearSim } =
     useForecast();
@@ -170,10 +347,6 @@ export default function Tracker() {
   useEffect(() => {
     clearSim();
   }, [offer, run.challengesCompleted, clearSim]);
-  const missionAdvice = useMemo(
-    () => (missionOffer.length > 0 ? evaluateMissionOffer(run, missionOffer) : null),
-    [run, missionOffer],
-  );
 
   const advice = useMemo(
     () => (offer.length > 0 ? evaluateOffer(run, offer) : null),
@@ -216,8 +389,36 @@ export default function Tracker() {
     return <main className="p-8 text-sm text-zinc-500">Loading run…</main>;
   }
 
+  // Boon prompt takes precedence over a freshly-due mission so the two resolve
+  // in the order they happen (pick your blue's boon, then the next mission).
+  const showBoonModal = prompt?.kind === 'boon';
+  const missionModalWanted = !showBoonModal && (prompt?.kind === 'mission' || missionDue);
+  const showMissionModal = missionModalWanted && !missionModalClosed;
+
   return (
     <main className="mx-auto max-w-5xl space-y-4 p-4">
+      {showBoonModal && (
+        <Modal title="Blue Beacon — choose your boon" onClose={dismissPrompt}>
+          <BoonNamer onDone={dismissPrompt} />
+        </Modal>
+      )}
+      {showMissionModal && (
+        <Modal
+          title={
+            missionDue && prompt?.kind !== 'mission'
+              ? '🎯 Forced mission choice (challenge 4)'
+              : 'Grey Beacon — choose a mission'
+          }
+          subtitle="Enter the 3 missions you were offered; the advisor ranks them for your run."
+          onClose={() => {
+            dismissPrompt();
+            setMissionModalClosed(true);
+          }}
+        >
+          <MissionPicker />
+        </Modal>
+      )}
+
       {/* Header */}
       <header className="flex flex-wrap items-center gap-3">
         <h1 className="text-xl font-bold">Lootrun Advisor</h1>
@@ -356,22 +557,15 @@ export default function Tracker() {
         )}
       </div>
 
-      {/* Forced first mission — blocks the run until picked */}
-      {missionDue && (
-        <div className="rounded-lg border-2 border-amber-500 bg-amber-950/60 px-4 py-3">
-          <p className="font-semibold text-amber-100">
-            🎯 Forced mission choice — challenge {run.challengesCompleted} complete
-          </p>
-          <p className="mt-0.5 text-sm text-amber-200/80">
-            The first mission is offered automatically, not from a grey beacon. Enter the 3
-            missions you were shown in the Missions panel below and the advisor will rank them.
-          </p>
-          <p className="mt-1 text-xs text-amber-300/70">
-            With ~{missionAdvice?.slotsLeft ?? RUN_CONSTANTS.maxMissions} slots in a run, this
-            pick largely commits your archetype — but the guide advises not to{' '}
-            <em>fulfil</em> it until run extension is secure.
-          </p>
-        </div>
+      {/* Forced-mission reopen chip: the modal is dismissable, but a due
+          mission still blocks the run, so keep a visible way back to it. */}
+      {missionDue && missionModalClosed && (
+        <button
+          onClick={() => setMissionModalClosed(false)}
+          className="w-full rounded-lg border-2 border-amber-500 bg-amber-950/60 px-4 py-2 text-left text-sm font-semibold text-amber-100 hover:bg-amber-900/60"
+        >
+          🎯 Forced mission choice pending — click to pick
+        </button>
       )}
 
       {/* Orange duration breakdown */}
@@ -701,80 +895,18 @@ export default function Tracker() {
             )}
           </div>
 
-          {/* Mission offer — picker stays open so all 3 can be entered */}
-          <details open={missionOffer.length > 0 || missionDue} className="mb-2">
-            <summary
-              className={`cursor-pointer text-xs ${
-                missionDue ? 'font-semibold text-amber-400' : 'text-zinc-500 hover:text-zinc-300'
-              }`}
-            >
-              {missionDue
-                ? `⚠ forced mission choice — select the 3 offered (${missionOffer.length} entered)`
-                : pending
-                  ? 'mission processing — no grey offers'
-                  : `grey beacon? select the offered missions (${missionOffer.length} entered)`}
-            </summary>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {MISSIONS.filter((m) => !run.missions.some((h) => h.id === m.id)).map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => toggleMissionOffer(m.id)}
-                  title={m.effect ?? ''}
-                  className={`rounded px-1.5 py-0.5 text-[11px] ${
-                    missionOffer.includes(m.id)
-                      ? 'bg-cyan-800 text-cyan-100 ring-1 ring-cyan-400'
-                      : 'bg-zinc-800 hover:bg-zinc-700'
-                  }`}
-                >
-                  {m.name}
-                </button>
-              ))}
-            </div>
-          </details>
-
-          {missionOffer.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs uppercase tracking-wide text-zinc-500">
-                  Grey beacon — pick one
-                </span>
-                <button onClick={() => setMissionOffer([])}
-                  className="text-xs text-zinc-500 hover:text-zinc-300">clear</button>
+          {/* Grey/forced picks happen in the modal; this is a manual fallback. */}
+          {pending ? (
+            <p className="text-xs text-zinc-600">mission processing — no grey offers</p>
+          ) : (
+            <details className="mb-1" open={missionOffer.length > 0}>
+              <summary className="cursor-pointer text-xs text-zinc-500 hover:text-zinc-300">
+                manually enter a grey/mission offer
+              </summary>
+              <div className="mt-2">
+                <MissionPicker />
               </div>
-              {missionAdvice?.committed && (
-                <p className="text-xs text-cyan-300">
-                  Committed: {missionAdvice.committed.name} ({missionAdvice.committed.progress})
-                </p>
-              )}
-              {missionAdvice && missionAdvice.missingRoles.length > 0 && (
-                <p className="text-xs text-amber-400">
-                  Still missing: {missionAdvice.missingRoles.join(', ')}
-                </p>
-              )}
-              <ol className="space-y-1.5">
-                {missionAdvice?.ranked.map((r, i) => (
-                  <li key={r.id}
-                    className={`rounded-lg border p-2 ${
-                      i === 0 ? 'border-green-700 bg-green-950/40' : 'border-zinc-800'
-                    }`}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">#{i + 1} {r.name}</span>
-                      <span className="text-[11px] text-zinc-500">score {r.score}</span>
-                      <button
-                        onClick={() => takeMissionFromOffer(r.id)}
-                        className="ml-auto rounded bg-green-700 px-2 py-0.5 text-xs hover:bg-green-600"
-                      >
-                        Take
-                      </button>
-                    </div>
-                    <p className="mt-0.5 text-[11px] text-zinc-500">{r.effect}</p>
-                    <ul className="mt-1 space-y-0.5 text-[11px] text-zinc-400">
-                      {r.reasons.map((why) => <li key={why}>• {why}</li>)}
-                    </ul>
-                  </li>
-                ))}
-              </ol>
-            </div>
+            </details>
           )}
         </div>
 
