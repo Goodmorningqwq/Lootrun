@@ -1,0 +1,71 @@
+{
+  "wynncraftVersion": "2.2.1",
+  "source": "wynncraft.wiki.gg + fandom Lootrunning pages",
+  "verified": "2026-07-23",
+
+  "mechanic": {
+    "summary": "A mission is NOT active the moment you take it. It comes with a RANDOMIZED objective; completing that objective activates the mission's ongoing effect.",
+    "keyQuote": "Mission objectives are randomized, and may include gaining time, earning End Reward Pulls, opening chests, getting Boons or Curses, or being offered a certain number of Beacons.",
+    "greyRule": "Only one Mission can be taken on at a time, and you will not be offered any Grey Beacons as long as one is already active. (So grey stays blocked until the active mission's objective is completed.)",
+    "consequence": "The objective is NOT a fixed property of the mission — the same mission rolls a different objective each pickup. It therefore cannot be pre-listed per mission; the player must input which objective they were given, and the advisor biases beacons toward completing it.",
+    "confirmedBy": "user, 2026-07-23 (\"you don't instantly get the effect... you need to do something to activate it, such as open chest, get boons or curse\")"
+  },
+
+  "objectiveTypes": [
+    {
+      "id": "gain_time",
+      "label": "Gain time",
+      "example": "Add +Ns to your timer",
+      "advancedBy": ["green"],
+      "alsoHelps": ["stasis", "backup_beat"],
+      "note": "Green Beacon is the direct source. Blocked while Chronotrigger (no time gain) is active."
+    },
+    {
+      "id": "earn_pulls",
+      "label": "Earn End Reward Pulls",
+      "example": "Gain N Reward Pulls",
+      "advancedBy": ["purple", "darkGrey"],
+      "note": "Purple and darkGrey grant pulls directly; high_roller/knife_edge/many pull missions also count."
+    },
+    {
+      "id": "open_chests",
+      "label": "Open chests",
+      "example": "Open N chests",
+      "advancedBy": ["yellow"],
+      "alsoHelps": ["materialism"],
+      "note": "Yellow spawns flying chests; Materialism adds 2/challenge. Environmental chests count too (see Chronokinesis chest rules)."
+    },
+    {
+      "id": "get_boons",
+      "label": "Get Boons",
+      "example": "Gain N Boons",
+      "advancedBy": ["blue"],
+      "alsoHelps": ["hoarder", "jesters_trick", "complete_chaos"],
+      "note": "Blue is the direct boon source; boon-generator missions also count once online."
+    },
+    {
+      "id": "get_curses",
+      "label": "Get Curses",
+      "example": "Gain N Curses",
+      "advancedBy": ["purple", "darkGrey"],
+      "alsoHelps": ["porphyrophobia"],
+      "note": "Purple and darkGrey grant curses. Purple therefore advances BOTH earn_pulls AND get_curses — doubly good when either is the active objective."
+    },
+    {
+      "id": "offered_beacons",
+      "label": "Be offered N Beacons",
+      "example": "Be offered N Beacons",
+      "advancedBy": ["orange"],
+      "alsoHelps": ["pink", "gourmand"],
+      "note": "Orange raises beacon choices (more beacons offered per challenge); rerolls (pink/Gourmand) also increase total beacons seen."
+    }
+  ],
+
+  "incomplete": "The wiki says objectives 'may include' these six, so the list may not be exhaustive. Candidates to confirm in-game: complete challenges, kill mobs, use beacon rerolls. Also unconfirmed: the exact quantity per objective (does it scale with challenge number?), and whether completing the objective is what unblocks grey or whether that is a separate 'fulfilled' state.",
+
+  "openQuestions": [
+    "Are there objective types beyond these six? (kill mobs, complete challenges?)",
+    "Does the required quantity scale (e.g. 'open 3 chests' early vs 'open 8' late)?",
+    "Is 'objective complete' the same event as 'mission fulfilled / grey unblocks', or two steps?"
+  ]
+}
