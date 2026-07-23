@@ -267,6 +267,75 @@ describe('archetype-aware beacon priority (playtester feedback)', () => {
   });
 });
 
+describe('per-mission / per-trial bias composes across combinations', () => {
+  /** Score of one colour in an offer, for comparing setups. */
+  const scoreOf = (state: RunState, color: 'red' | 'blue' | 'green' | 'yellow' | 'purple') =>
+    evaluateOffer(state, [{ color }]).ranked[0]!.score;
+
+  it('a single mission shifts priority on its own', () => {
+    const base = scoreOf(runAt(15), 'red');
+    const withThrill = scoreOf(runAt(15, { missions: slots('thrill_seeker') }), 'red');
+    expect(withThrill).toBeGreaterThan(base); // +30, pulls per red challenge
+  });
+
+  it('two entities that want the same beacon STACK — no pair rule written', () => {
+    const one = scoreOf(runAt(15, { missions: slots('thrill_seeker') }), 'red');
+    const both = scoreOf(
+      runAt(15, { missions: slots('thrill_seeker'), trials: ['warmth_devourer'] }),
+      'red',
+    );
+    // Thrill Seeker +30 and Warmth Devourer +30 sum without an explicit combo rule.
+    expect(both).toBe(one + 30);
+  });
+
+  it('opposing effects cancel rather than one silently winning', () => {
+    // Thrill Seeker wants red; Knife Edge is ruined by added challenges.
+    const thrill = scoreOf(runAt(15, { missions: slots('thrill_seeker') }), 'red');
+    const both = scoreOf(runAt(15, { missions: slots('thrill_seeker', 'knife_edge') }), 'red');
+    expect(both).toBe(thrill - 30); // Knife Edge's -30 applies too
+  });
+
+  it('a trial can veto a beacon the phase likes — Ultimate Sacrifice kills blue', () => {
+    const normal = scoreOf(runAt(15), 'blue');
+    const disabled = scoreOf(runAt(15, { trials: ['ultimate_sacrifice'] }), 'blue');
+    expect(disabled).toBe(normal - 40);
+    const a = evaluateOffer(runAt(15, { trials: ['ultimate_sacrifice'] }), [
+      { color: 'blue' },
+      { color: 'red' },
+    ]);
+    expect(a.ranked[0]?.color).toBe('red');
+    expect(a.ranked.find((r) => r.color === 'blue')!.reasons.join(' ')).toMatch(
+      /boons are DISABLED/i,
+    );
+  });
+
+  it('Gambling Beast makes green urgent', () => {
+    const base = scoreOf(runAt(15), 'green');
+    const gb = scoreOf(runAt(15, { trials: ['gambling_beast'] }), 'green');
+    expect(gb).toBe(base + 35);
+  });
+
+  it('un-activated missions contribute NO bias', () => {
+    const activated = scoreOf(runAt(15, { missions: slots('thrill_seeker') }), 'red');
+    const pending = scoreOf(
+      runAt(15, { missions: [{ id: 'thrill_seeker', fulfilled: false }] }),
+      'red',
+    );
+    expect(pending).toBeLessThan(activated);
+  });
+
+  it('every bias contribution is explained, not silently applied', () => {
+    const a = evaluateOffer(
+      runAt(15, { missions: slots('hoarder', 'interest_scheme'), trials: ['side_hustle'] }),
+      [{ color: 'yellow' }],
+    );
+    const why = a.ranked[0]!.reasons.join(' | ');
+    expect(why).toMatch(/Hoarder: \+25/);
+    expect(why).toMatch(/Interest Scheme: \+25/);
+    expect(why).toMatch(/Side Hustle: \+30/);
+  });
+});
+
 describe('tactics: boosted-only, aqua loop, orange refresh', () => {
   it('prefers a boosted grey over a raw one — the reported complaint', () => {
     // Mujtaba: "it was recommending I take a non boosted gray but I prefer not

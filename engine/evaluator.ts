@@ -12,6 +12,7 @@
 
 import strategyJson from '../strategies/default.json';
 import missionsJson from '../data/missions.json';
+import trialsJson from '../data/trials.json';
 import archetypesJson from '../data/archetypes.json';
 import objectivesJson from '../data/mission_objectives.json';
 import type { BeaconColor, OfferedBeacon, RunState } from './types';
@@ -132,6 +133,16 @@ interface MissionSpec {
   strength?: string;
   archetypes?: string[];
   notes?: string;
+  beaconBias?: Partial<Record<BeaconColor, number>>;
+  beaconBiasWhy?: string;
+}
+
+interface TrialSpec {
+  id: string;
+  name: string;
+  requirement?: string | null;
+  beaconBias?: Partial<Record<BeaconColor, number>>;
+  beaconBiasWhy?: string;
 }
 
 const missionFile = missionsJson as unknown as { missions: MissionSpec[] };
@@ -181,6 +192,12 @@ export function committedArchetype(state: RunState, activatedOnly = false): Arch
   }
   return best?.a ?? null;
 }
+
+export const TRIALS: Record<string, TrialSpec> = Object.fromEntries(
+  (trialsJson as unknown as { trials: TrialSpec[] }).trials
+    .filter((t) => t.requirement)
+    .map((t) => [t.id, t]),
+);
 
 const ARCHETYPES = (archetypesJson as unknown as { archetypes: Archetype[] }).archetypes;
 
@@ -500,6 +517,27 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
   const archetype = committedArchetype(state, true);
   const bias = archetype?.beaconBias ?? {};
 
+  /**
+   * Every held mission and trial contributes its own beacon bias, and they SUM.
+   * That is what makes priority shift for each unique combination without
+   * enumerating them — 28C3 missions x 13C2 trials is ~250k combinations, but
+   * composing per-entity effects covers all of them.
+   */
+  const modifiers: Array<{ label: string; why?: string; bias: Partial<Record<BeaconColor, number>> }> = [];
+  for (const m of state.missions) {
+    if (!m.fulfilled) continue; // no effect until activated
+    const spec = MISSIONS[m.id];
+    if (spec?.beaconBias) {
+      modifiers.push({ label: spec.name, why: spec.beaconBiasWhy, bias: spec.beaconBias });
+    }
+  }
+  for (const id of state.trials) {
+    const spec = TRIALS[id];
+    if (spec?.beaconBias) {
+      modifiers.push({ label: spec.name, why: spec.beaconBiasWhy, bias: spec.beaconBias });
+    }
+  }
+
   // The un-activated mission (if any) needs its objective completed before it
   // does anything. Push the beacon that advances that objective instead.
   const armingMission = pendingMission(state);
@@ -571,6 +609,16 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
         `${archetype?.name}: ${biasVal > 0 ? '+' : ''}${biasVal} (run combo ${
           biasVal > 0 ? 'wants' : 'avoids'
         } ${b.color})`,
+      );
+    }
+
+    // --- per-mission / per-trial bias, summed --------------------------
+    for (const mod of modifiers) {
+      const v = mod.bias[b.color];
+      if (!v) continue;
+      score += v;
+      reasons.push(
+        `${mod.label}: ${v > 0 ? '+' : ''}${v}${mod.why ? ` — ${mod.why}` : ''}`,
       );
     }
 

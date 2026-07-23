@@ -20,7 +20,11 @@
       "archetypes": [
         "flying_chest"
       ],
-      "notes": "Dead without a flying-chest source. Anti-synergy with curse-stacking archetypes that WANT curses."
+      "notes": "Dead without a flying-chest source. Anti-synergy with curse-stacking archetypes that WANT curses.",
+      "beaconBias": {
+        "yellow": 10
+      },
+      "beaconBiasWhy": "flying chests cleanse curses"
     },
     {
       "id": "materialism",
@@ -35,7 +39,11 @@
       "archetypes": [
         "flying_chest"
       ],
-      "notes": "2.1.3 buff: no longer blocks Yellow Beacons, and always spawns 2. Enabler for every chest-consuming mission."
+      "notes": "2.1.3 buff: no longer blocks Yellow Beacons, and always spawns 2. Enabler for every chest-consuming mission.",
+      "beaconBias": {
+        "yellow": 10
+      },
+      "beaconBiasWhy": "spawns flying chests"
     },
     {
       "id": "hoarder",
@@ -51,7 +59,11 @@
         "flying_chest"
       ],
       "changedIn": "2.2.1 — required chests 7 -> 6, and the chosen Boon is now 200% potency.",
-      "notes": "Primary boon generator — lets you skip Blue Beacons. Requires a chest engine (Materialism/Yellow). The 2.2.1 buff (6 chests @ 200%) makes this materially stronger than any pre-June-2026 guide rates it."
+      "notes": "Primary boon generator — lets you skip Blue Beacons. Requires a chest engine (Materialism/Yellow). The 2.2.1 buff (6 chests @ 200%) makes this materially stronger than any pre-June-2026 guide rates it.",
+      "beaconBias": {
+        "yellow": 25
+      },
+      "beaconBiasWhy": "needs flying chests"
     },
     {
       "id": "jesters_trick",
@@ -69,7 +81,11 @@
         "flying_chest"
       ],
       "notes": "Multi-role filler. Random, so counts as a WEAK generator — do not let it satisfy the runnable predicate alone.",
-      "strength": "weak"
+      "strength": "weak",
+      "beaconBias": {
+        "yellow": 20
+      },
+      "beaconBiasWhy": "needs items from flying chests"
     },
     {
       "id": "interest_scheme",
@@ -85,7 +101,12 @@
       "archetypes": [
         "flying_chest"
       ],
-      "notes": "Converts pulls into chests; pairs with Hoarder to close a pull -> chest -> boon loop."
+      "notes": "Converts pulls into chests; pairs with Hoarder to close a pull -> chest -> boon loop.",
+      "beaconBias": {
+        "yellow": 25,
+        "purple": 10
+      },
+      "beaconBiasWhy": "pulls convert into flying chests"
     },
     {
       "id": "orphions_grace",
@@ -102,7 +123,11 @@
         "curse_stack",
         "reroll_spam"
       ],
-      "notes": "Universal good. Multiplicative with everything boon-shaped."
+      "notes": "Universal good. Multiplicative with everything boon-shaped.",
+      "beaconBias": {
+        "blue": 20
+      },
+      "beaconBiasWhy": "boons 50% stronger"
     },
     {
       "id": "opal_offering",
@@ -119,7 +144,12 @@
       "archetypes": [
         "curse_stack"
       ],
-      "notes": "REQUIRES per-boon potency tracking to advise correctly. Wants high-potency boons + high curse rate."
+      "notes": "REQUIRES per-boon potency tracking to advise correctly. Wants high-potency boons + high curse rate.",
+      "beaconBias": {
+        "purple": 20,
+        "blue": 15
+      },
+      "beaconBiasWhy": "curses consume boons for pulls"
     },
     {
       "id": "gourmand",
@@ -137,7 +167,11 @@
       ],
       "verified": true,
       "notes": "At +2/reroll the 6-choice cap is reached in two rerolls, so reroll_spam is genuinely viable. Confirms the archetype.",
-      "resolvedBy": "user, 2026-07-21 — guide was right (+2), wiki wrong (+1)."
+      "resolvedBy": "user, 2026-07-21 — guide was right (+2), wiki wrong (+1).",
+      "beaconBias": {
+        "pink": 30
+      },
+      "beaconBiasWhy": "rerolls buy beacon choices"
     },
     {
       "id": "route_indigo",
@@ -152,7 +186,12 @@
         "beaconUses.blue"
       ],
       "archetypes": [],
-      "notes": "The 'Vibrant Aqua equivalent' quantification makes this scorable rather than vague — but it was measured under the OLD multiplicative model, so re-check under 2.2.1 additive boosting. Obscured = hidden information: the engine knows the tier here even though the player cannot see it."
+      "notes": "The 'Vibrant Aqua equivalent' quantification makes this scorable rather than vague — but it was measured under the OLD multiplicative model, so re-check under 2.2.1 additive boosting. Obscured = hidden information: the engine knows the tier here even though the player cannot see it.",
+      "beaconBias": {
+        "purple": 25,
+        "blue": 25
+      },
+      "beaconBiasWhy": "purple/blue always greatly empowered"
     },
     {
       "id": "ostinato",
@@ -168,7 +207,11 @@
       "archetypes": [
         "ostinato"
       ],
-      "notes": "INVERTS boon-selection advice: normally avoid duplicates, with Ostinato deliberately stack them. Hard anti-synergy with Opal Offering (which wants high potency)."
+      "notes": "INVERTS boon-selection advice: normally avoid duplicates, with Ostinato deliberately stack them. Hard anti-synergy with Opal Offering (which wants high potency).",
+      "beaconBias": {
+        "blue": 20
+      },
+      "beaconBiasWhy": "duplicate boons pay pulls"
     },
     {
       "id": "porphyrophobia",
@@ -185,7 +228,11 @@
       "archetypes": [
         "curse_stack"
       ],
-      "notes": "Triggers on OFFER, not on take. Pairs with Equilibrium (curses -> boon potency)."
+      "notes": "Triggers on OFFER, not on take. Pairs with Equilibrium (curses -> boon potency).",
+      "beaconBias": {
+        "purple": 30
+      },
+      "beaconBiasWhy": "purple gives double pulls"
     },
     {
       "id": "radiant_hunter",
@@ -202,7 +249,11 @@
       "archetypes": [
         "radiance"
       ],
-      "notes": "Radiance curse type is NEW in 2.2.0 — this archetype is under-explored and guides predating April 2026 will not cover it."
+      "notes": "Radiance curse type is NEW in 2.2.0 — this archetype is under-explored and guides predating April 2026 will not cover it.",
+      "beaconBias": {
+        "purple": 10
+      },
+      "beaconBiasWhy": "radiance curses feed pulls"
     },
     {
       "id": "equilibrium",
@@ -219,7 +270,12 @@
         "curse_stack"
       ],
       "changedIn": "2.2.1 — boost +50% -> +100%, cap +300% -> +600%. This is a 2x buff to the whole curse_stack archetype.",
-      "notes": "SEQUENCING RULE: bank 6 curses BEFORE taking a Blue Beacon (6 x +100% = the +600% cap). The '6 curses' figure survives the rebalance by coincidence — derive it as cap/perCurse, never hardcode it."
+      "notes": "SEQUENCING RULE: bank 6 curses BEFORE taking a Blue Beacon (6 x +100% = the +600% cap). The '6 curses' figure survives the rebalance by coincidence — derive it as cap/perCurse, never hardcode it.",
+      "beaconBias": {
+        "purple": 20,
+        "blue": 15
+      },
+      "beaconBiasWhy": "curses charge the next boon"
     },
     {
       "id": "inner_peace",
@@ -234,7 +290,12 @@
       "archetypes": [
         "curse_stack"
       ],
-      "notes": "Mitigates the DIFFICULTY of curses without removing them, so curse-count payoffs (Madman, Equilibrium) still fire. That is why it appears in curse-stack lists despite sounding contradictory."
+      "notes": "Mitigates the DIFFICULTY of curses without removing them, so curse-count payoffs (Madman, Equilibrium) still fire. That is why it appears in curse-stack lists despite sounding contradictory.",
+      "beaconBias": {
+        "purple": 15,
+        "darkGrey": 10
+      },
+      "beaconBiasWhy": "curses are half as harmful"
     },
     {
       "id": "optimism",
@@ -249,7 +310,11 @@
       "archetypes": [
         "reroll_spam"
       ],
-      "notes": "Turns rerolls from random into a search. Massively raises P(finding rainbow/orange)."
+      "notes": "Turns rerolls from random into a search. Massively raises P(finding rainbow/orange).",
+      "beaconBias": {
+        "pink": 20
+      },
+      "beaconBiasWhy": "rerolls search rather than reroll"
     },
     {
       "id": "high_spirits",
@@ -262,7 +327,11 @@
         "vibrancyChance"
       ],
       "archetypes": [],
-      "notes": "Universal but low-variance. Changes the offer model, not the decision rule."
+      "notes": "Universal but low-variance. Changes the offer model, not the decision rule.",
+      "beaconBias": {
+        "aqua": 10
+      },
+      "beaconBiasWhy": "more vibrancy"
     },
     {
       "id": "beleza_pura",
@@ -275,7 +344,11 @@
         "beaconOffers.aqua"
       ],
       "archetypes": [],
-      "notes": "Removes the aqua-then-payoff sequencing cost entirely. Very strong; changes aqua priority from 'take and hold' to 'ignore, take the payoff directly'."
+      "notes": "Removes the aqua-then-payoff sequencing cost entirely. Very strong; changes aqua priority from 'take and hold' to 'ignore, take the payoff directly'.",
+      "beaconBias": {
+        "aqua": 30
+      },
+      "beaconBiasWhy": "one aqua boosts every offered beacon"
     },
     {
       "id": "backup_beat",
@@ -291,7 +364,11 @@
         "reroll_spam"
       ],
       "notes": "Reads CUMULATIVE time gained, not the displayed timer. Overcapping is therefore not purely wasteful for Backup Beat — but it does forfeit the +60s/+90s challenge grants, so sitting at cap has a real cost.",
-      "overcapRule": "Time gained ABOVE the 15-minute soft cap still counts toward Backup Beat and other timer-based mission requirements, even though the timer does not display it. BUT no time registers from entering/completing a challenge while the timer is already above 15 minutes."
+      "overcapRule": "Time gained ABOVE the 15-minute soft cap still counts toward Backup Beat and other timer-based mission requirements, even though the timer does not display it. BUT no time registers from entering/completing a challenge while the timer is already above 15 minutes.",
+      "beaconBias": {
+        "green": 25
+      },
+      "beaconBiasWhy": "time gain buys rerolls"
     },
     {
       "id": "requiem",
@@ -306,7 +383,12 @@
       ],
       "archetypes": [],
       "notes": "Time-boxed panic button. Enables an otherwise-lethal curse stack. Track expiry.",
-      "resolvedBy": "Guide, 2026-07-21 — richer than the wiki, and settles the earlier wiki-vs-guide ambiguity: it voids curses too, not just scaling."
+      "resolvedBy": "Guide, 2026-07-21 — richer than the wiki, and settles the earlier wiki-vs-guide ambiguity: it voids curses too, not just scaling.",
+      "beaconBias": {
+        "purple": 20,
+        "darkGrey": 15
+      },
+      "beaconBiasWhy": "mob buffs and curses voided"
     },
     {
       "id": "stasis",
@@ -357,7 +439,11 @@
       "campDependent": {
         "best": "Corkus — many multi-chest spelunk challenges plus a high density of environmental chests",
         "second": "Molten Heights — many easily reachable environmental chests"
-      }
+      },
+      "beaconBias": {
+        "green": 15
+      },
+      "beaconBiasWhy": "chests cost timer"
     },
     {
       "id": "thrill_seeker",
@@ -378,7 +464,12 @@
       ],
       "notes": "CONFLICT RULE: green resets the stack, but green is the timeout guard. Advisor must surface this tradeoff explicitly rather than silently picking.",
       "verified": true,
-      "resolvedBy": "user, 2026-07-21 — green reset survives the 2.2.1 rework."
+      "resolvedBy": "user, 2026-07-21 — green reset survives the 2.2.1 rework.",
+      "beaconBias": {
+        "red": 30,
+        "green": -25
+      },
+      "beaconBiasWhy": "pulls per red challenge; green RESETS the stack"
     },
     {
       "id": "knife_edge",
@@ -393,7 +484,12 @@
       "archetypes": [
         "endgame"
       ],
-      "notes": "HARD ANTI-SYNERGY with White/Red beacons and Sacrificial Ritual. Literally zero value above 7 challenges remaining. Classic trap pick."
+      "notes": "HARD ANTI-SYNERGY with White/Red beacons and Sacrificial Ritual. Literally zero value above 7 challenges remaining. Classic trap pick.",
+      "beaconBias": {
+        "red": -30,
+        "white": -30
+      },
+      "beaconBiasWhy": "pays 7 minus challenges remaining — adding challenges shrinks it"
     },
     {
       "id": "kings_court",
@@ -407,7 +503,11 @@
         "beaconUses.crimson"
       ],
       "archetypes": [],
-      "notes": "The trade is the whole story and the wiki omits it. With only ~3 mission slots, this is not a free '+1 crimson' — it costs a third of your mission capacity. Scorer must charge it the full opportunity cost of the best mission you would otherwise take."
+      "notes": "The trade is the whole story and the wiki omits it. With only ~3 mission slots, this is not a free '+1 crimson' — it costs a third of your mission capacity. Scorer must charge it the full opportunity cost of the best mission you would otherwise take.",
+      "beaconBias": {
+        "crimson": 20
+      },
+      "beaconBiasWhy": "adds a crimson to the pool"
     },
     {
       "id": "high_roller",
@@ -450,7 +550,11 @@
       "archetypes": [
         "endgame"
       ],
-      "notes": "Converts pulls into runway. Fails on the final challenge. Hard anti-synergy with Knife Edge."
+      "notes": "Converts pulls into runway. Fails on the final challenge. Hard anti-synergy with Knife Edge.",
+      "beaconBias": {
+        "purple": 10
+      },
+      "beaconBiasWhy": "pulls convert into challenges"
     },
     {
       "id": "complete_chaos",
@@ -509,5 +613,6 @@
     "why": "Neither wiki nor guide is uniformly ahead. User confirmed Gourmand +2 (guide right, wiki wrong) AND Chronokinesis non-flying (wiki right, guide wrong). A blanket \"trust source X\" rule would import errors from whichever was chosen.",
     "guideStatus": "Re-checked 2026-07-21: the guide Missions tab still lists PRE-2.2.1 values (Hoarder 8 chests/300%, Equilibrium +50%/+300%, Jester +30s, Thrill Seeker per 6). Its Changelogs and Run Setup tabs ARE current. Tabs drifted independently — do not treat the doc as uniformly updated.",
     "method": "Wiki page as base -> replay every changelog -> override with user confirmation. Each record carries changedIn / resolvedBy so provenance stays auditable."
-  }
+  },
+  "beaconBiasNote": "Per-mission beacon steering, applied ONLY once the mission is activated. These SUM across held missions and trials, so every combination is covered without enumerating it (28C3 x 13C2 is ~250k combinations). Magnitudes are deliberately modest (10-35) so they nudge phase priority rather than swamp it."
 }

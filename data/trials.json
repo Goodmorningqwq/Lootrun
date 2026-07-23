@@ -19,7 +19,11 @@
       "risk": "medium",
       "notes": "Punishes deliberation — i.e. punishes using this app. Pairs with Stasis.",
       "guideTier": "A",
-      "guideNote": "Cross interludes fast to minimise boon loss."
+      "guideNote": "Cross interludes fast to minimise boon loss.",
+      "beaconBias": {
+        "purple": 15
+      },
+      "beaconBiasWhy": "ends at +30 pulls — pulls close it out"
     },
     {
       "id": "dying_light",
@@ -38,7 +42,11 @@
       ],
       "notes": "Requires Equilibrium/Orphion's Grace to hit +800%. Guide pairs it with All In for extreme reroll counts.",
       "guideTier": "A",
-      "guideNote": "Works extremely well with All In."
+      "guideNote": "Works extremely well with All In.",
+      "beaconBias": {
+        "blue": 30
+      },
+      "beaconBiasWhy": "needs +800% boon potency"
     },
     {
       "id": "monochromokopia",
@@ -55,7 +63,12 @@
       "notes": "Reward is excellent (extra White = more challenges, extra Grey = 4th mission). Obscured beacons mean the advisor must reason under uncertainty for 7 challenges.",
       "guideTier": "C",
       "guideNote": "DO NOT TAKE. Completed beacons become unidentifiable.",
-      "CORRECTION": "I called the reward excellent. Guide rates it C and advises against it — the obscuring cost outweighs the extra White/Grey/DarkGrey."
+      "CORRECTION": "I called the reward excellent. Guide rates it C and advises against it — the obscuring cost outweighs the extra White/Grey/DarkGrey.",
+      "beaconBias": {
+        "white": 10,
+        "grey": 10
+      },
+      "beaconBiasWhy": "adds an extra white/grey/darkGrey to the pool"
     },
     {
       "id": "chronotrigger",
@@ -81,7 +94,11 @@
       "guideTier": "S",
       "objective": "Complete 12 challenges",
       "guideNote": "Time penalties from dying still apply. Green beacons void mob buffs and work from Complete Chaos.",
-      "resolvedBy": "user, 2026-07-22 — cleanse 7.5% (guide right), pull boost cap 5% (changelog right). Each source had half the truth."
+      "resolvedBy": "user, 2026-07-22 — cleanse 7.5% (guide right), pull boost cap 5% (changelog right). Each source had half the truth.",
+      "beaconBias": {
+        "green": 20
+      },
+      "beaconBiasWhy": "green cleanses curses and boosts pulls (time gain is void anyway)"
     },
     {
       "id": "all_in",
@@ -100,7 +117,12 @@
       ],
       "notes": "Converts the Redemption/sac axis into rerolls. Wants MANY sacs banked before run end.",
       "guideTier": "B",
-      "guideNote": "Provides no sacrifices itself — most effective paired with Dying Light."
+      "guideNote": "Provides no sacrifices itself — most effective paired with Dying Light.",
+      "beaconBias": {
+        "purple": -20,
+        "darkGrey": -20
+      },
+      "beaconBiasWhy": "curse effects are DOUBLED — curse beacons are riskier"
     },
     {
       "id": "gambling_beast",
@@ -119,7 +141,11 @@
       "notes": "Escalating cost ends the run in ~3 challenges. Correct ONLY as a deliberate final-act cash-out when no good combo formed — exactly the guide's fallback rule.",
       "guideTier": "A",
       "guideNote": "SHOULD ALMOST ALWAYS BE TAKEN AS 2ND TRIAL. Stack Vibrant Aqua/Green beacons to sustain it. Grants no reroll if the timer cannot absorb the cost.",
-      "CORRECTION": "I rated this extreme/salvage-only. The guide rates it A tier and a near-DEFAULT second trial. My salvage-only framing was wrong."
+      "CORRECTION": "I rated this extreme/salvage-only. The guide rates it A tier and a near-DEFAULT second trial. My salvage-only framing was wrong.",
+      "beaconBias": {
+        "green": 35
+      },
+      "beaconBiasWhy": "drains 300s+ per challenge; time is the binding constraint"
     },
     {
       "id": "hubris",
@@ -157,7 +183,11 @@
       ],
       "notes": "Radiance is NEW in 2.2.0. Pairs directly with Radiant Hunter. Under-documented — high value to model well.",
       "guideTier": "S",
-      "guideNote": "Avoid multi-mob challenges; use Inner Peace to slow radiance buildup."
+      "guideNote": "Avoid multi-mob challenges; use Inner Peace to slow radiance buildup.",
+      "beaconBias": {
+        "purple": 10
+      },
+      "beaconBiasWhy": "radiance curses convert to pulls"
     },
     {
       "id": "side_hustle",
@@ -174,7 +204,11 @@
       "risk": "high",
       "notes": "SETS the timer (not reduces) — a hard clamp that invalidates all normal time reasoning while active.",
       "guideTier": "A",
-      "guideNote": "Timer resets at beacons; dying between challenges costs time; time still gained on red beacons."
+      "guideNote": "Timer resets at beacons; dying between challenges costs time; time still gained on red beacons.",
+      "beaconBias": {
+        "yellow": 30
+      },
+      "beaconBiasWhy": "timer clamps until 30 chests opened — chest sources end it"
     },
     {
       "id": "treasury_bill",
@@ -187,7 +221,11 @@
       "risk": "medium",
       "notes": "Take LATE with a large pull bank — +75% of a big number. Guide: complete via aqua-stacking purples under rainbow.",
       "guideTier": "A",
-      "guideNote": "Pair with Lights Out; complete via Purple/Dark Grey beacon stacking."
+      "guideNote": "Pair with Lights Out; complete via Purple/Dark Grey beacon stacking.",
+      "beaconBias": {
+        "purple": 30
+      },
+      "beaconBiasWhy": "bleeds a pull every 45s until +20 pulls"
     },
     {
       "id": "ultimate_sacrifice",
@@ -209,7 +247,11 @@
       "notes": "Blue Beacons are near-worthless for 10 challenges — advisor must actively downrank blue and boon-generators while active.",
       "guideTier": "S",
       "objective": "Complete 10 challenges",
-      "guideNote": "Recommended as FIRST trial when mob scaling is still low."
+      "guideNote": "Recommended as FIRST trial when mob scaling is still low.",
+      "beaconBias": {
+        "blue": -40
+      },
+      "beaconBiasWhy": "boons are DISABLED for 10 challenges — blue is near-dead"
     },
     {
       "id": "warmth_devourer",
@@ -226,7 +268,13 @@
       "risk": "low-if-boonless",
       "notes": "Burns 4 challenges per challenge completed. Needs a large challenge bank (post White) or it ends the run.",
       "guideTier": "A",
-      "EXPLOIT": "With NO boons held, the trial cannot remove challenges — but still grants its rewards. Effectively free when boon-less."
+      "EXPLOIT": "With NO boons held, the trial cannot remove challenges — but still grants its rewards. Effectively free when boon-less.",
+      "beaconBias": {
+        "red": 30,
+        "white": 30,
+        "purple": 20
+      },
+      "beaconBiasWhy": "eats 3 challenges per challenge until +20 pulls"
     },
     {
       "id": "imperitia",
@@ -244,7 +292,11 @@
       "notes": "Difficulty depends on the player's BUILD, which is outside the state machine. Should be a user-declared preference, not an engine calculation.",
       "guideTier": "F",
       "guideNote": "Never ever take this. Spell cost increase works like Outworn Soldier Gambit; only overridable by the Transcendence major ID.",
-      "CORRECTION": "I rated this medium risk. Guide rates it unplayable."
+      "CORRECTION": "I rated this medium risk. Guide rates it unplayable.",
+      "beaconBias": {
+        "purple": 25
+      },
+      "beaconBiasWhy": "spell costs climb until +30 pulls"
     },
     {
       "id": "unknown_2_2_1_trial",
@@ -282,5 +334,6 @@
     "neverTake": [
       "imperitia"
     ]
-  }
+  },
+  "beaconBiasNote": "Per-trial beacon steering, applied while the trial is held. Trials impose run-wide constraints so they shift priority hardest — e.g. Ultimate Sacrifice makes blue near-dead, Gambling Beast makes green critical. These SUM with mission and archetype bias, giving combination coverage without enumeration."
 }
