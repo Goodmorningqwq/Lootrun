@@ -40,9 +40,35 @@ Grey scored −100 with the reason buried. Show a clear "✕ dead pick" badge. *
 
 ---
 
-## Order of work
+## Status
 
-1. **A1–A4** (engine/data, testable, no UI churn) ← doing first
-2. **C** modal UX (page.tsx restructure)
-3. **B** mission objectives (needs completion-requirement data per mission)
-4. **E** mod — future
+| Item | State |
+| --- | --- |
+| **A1–A4** archetype-aware beacon advice | ✅ `afd6428` |
+| **C** modal-first entry | ✅ `8a8645c` |
+| **B** mission objectives + activation | ✅ `c96641f` (research) + `2a76494` (model) |
+| **D** last-challenge clarity | ✅ |
+| **6** strategy editor + import/export | ✅ `953ff1d` |
+| **E** Wynntils mod | ⬜ deferred by owner |
+
+### B — how it landed
+
+Research showed the activation objective is **randomized per pickup**, not a
+fixed per-mission property, so it could not be pre-listed. The model is
+two-phase instead:
+
+- **Before activation** the mission has no effect, so its archetype must not
+  steer beacons; the advisor pushes the beacon that *completes the objective*.
+- **After activation** (user ticks the box, which also unblocks grey) the
+  archetype bias applies.
+
+Objective pool: gain_time*, earn_pulls, open_chests, get_boons, get_curses,
+offered_beacons, complete_challenges*. (*passive — completes through normal
+play, pushes no beacon.) darkGrey is never recommended for an objective since
+it is once-per-run and saved for a max-power play.
+
+## Remaining
+
+- **E** — Wynntils mod so beacon state is read rather than typed. Deferred.
+- Deploy to Vercel (owner's account needed).
+- Simulator limitations still open: E[pulls] ignores boons and mission effects.
