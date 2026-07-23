@@ -81,13 +81,18 @@ describe('rollout', () => {
     expect(out.endedBy).toBe('timeout');
   });
 
-  it('runs out of challenges when time is plentiful', () => {
+  it('does not time out when time is plentiful', () => {
+    // With 10s/challenge (vs +150s granted) the timer never binds. The run
+    // ends either by exhausting challenges or by hitting the step cap — a good
+    // policy keeps taking challenge-adding beacons, so both are fine. What must
+    // NOT happen is a timeout.
     const out = rollout(at(5, { challengesRemaining: 8 }), makeRng(1), {
       ...DEFAULT_SIM,
       secondsPerChallenge: 10,
       maxSteps: 300,
     });
-    expect(out.endedBy).toBe('challenges');
+    expect(out.endedBy).not.toBe('timeout');
+    expect(out.challengesCompleted).toBeGreaterThan(8);
   });
 
   it('acquires missions along the way, reaching a runnable state', () => {

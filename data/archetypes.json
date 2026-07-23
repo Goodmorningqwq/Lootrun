@@ -6,30 +6,75 @@
     {
       "id": "flying_chest",
       "name": "Flying Chest Engine",
-      "core": ["jesters_trick", "interest_scheme", "hoarder"],
-      "enablers": ["materialism"],
-      "followups": [
-        ["orphions_grace"],
-        ["materialism"],
-        ["high_roller", "redemption"]
+      "core": [
+        "jesters_trick",
+        "interest_scheme",
+        "hoarder"
       ],
-      "boonPreference": ["serendipity", "looter", "parsimonious", "midas_touch"],
-      "trialPreference": ["side_hustle", "monochromokopia"],
-      "beaconBias": { "yellow": 30, "blue": -10 },
+      "enablers": [
+        "materialism"
+      ],
+      "followups": [
+        [
+          "orphions_grace"
+        ],
+        [
+          "materialism"
+        ],
+        [
+          "high_roller",
+          "redemption"
+        ]
+      ],
+      "boonPreference": [
+        "serendipity",
+        "looter",
+        "parsimonious",
+        "midas_touch"
+      ],
+      "trialPreference": [
+        "side_hustle",
+        "monochromokopia"
+      ],
+      "beaconBias": {
+        "yellow": 30,
+        "blue": -10
+      },
       "notes": "Self-sustaining pull->chest->boon loop. Hoarder makes Blue Beacons largely redundant, so blue is downranked once online."
     },
     {
       "id": "curse_stack",
       "name": "Curse Stacking",
-      "core": ["equilibrium", "porphyrophobia"],
-      "followups": [
-        ["high_roller", "redemption"],
-        ["inner_peace", "orphions_grace"],
-        ["opal_offering"]
+      "core": [
+        "equilibrium",
+        "porphyrophobia"
       ],
-      "boonPreference": ["madman", "bad_omen", "lightbringer"],
-      "trialPreference": ["all_in", "dying_light"],
-      "beaconBias": { "purple": 40, "green": -15 },
+      "followups": [
+        [
+          "high_roller",
+          "redemption"
+        ],
+        [
+          "inner_peace",
+          "orphions_grace"
+        ],
+        [
+          "opal_offering"
+        ]
+      ],
+      "boonPreference": [
+        "madman",
+        "bad_omen",
+        "lightbringer"
+      ],
+      "trialPreference": [
+        "all_in",
+        "dying_light"
+      ],
+      "beaconBias": {
+        "purple": 40,
+        "green": -15
+      },
       "sequencing": [
         {
           "when": "missions includes equilibrium",
@@ -48,57 +93,151 @@
     {
       "id": "reroll_spam",
       "name": "Beacon Reroll Spam",
-      "core": ["gourmand", "optimism"],
-      "followups": [
-        ["high_roller", "redemption"],
-        ["backup_beat"],
-        ["thrill_seeker"],
-        ["orphions_grace"]
+      "core": [
+        "gourmand",
+        "optimism"
       ],
-      "boonPreference": ["heavensent", "persnickety"],
-      "beaconBias": { "pink": 50, "orange": 30 },
+      "followups": [
+        [
+          "high_roller",
+          "redemption"
+        ],
+        [
+          "backup_beat"
+        ],
+        [
+          "thrill_seeker"
+        ],
+        [
+          "orphions_grace"
+        ]
+      ],
+      "boonPreference": [
+        "heavensent",
+        "persnickety"
+      ],
+      "beaconBias": {
+        "pink": 50,
+        "orange": 30
+      },
       "notes": "Gourmand + Optimism turns each reroll into a directed search for rainbow/orange. Requires reroll income — Pink Beacon (new in 2.2.0) made this archetype substantially stronger."
     },
     {
       "id": "radiance",
       "name": "Radiance (2.2.0)",
-      "core": ["radiant_hunter"],
-      "followups": [["high_roller", "redemption"], ["orphions_grace"]],
-      "trialPreference": ["lights_out"],
+      "core": [
+        "radiant_hunter"
+      ],
+      "followups": [
+        [
+          "high_roller",
+          "redemption"
+        ],
+        [
+          "orphions_grace"
+        ]
+      ],
+      "trialPreference": [
+        "lights_out"
+      ],
       "confidence": "low",
       "notes": "NEW in 2.2.0 and under-documented. Lights Out feeds Radiance curses; Radiant Hunter converts them to pulls. Encode with low confidence and flag in UI until validated by real runs."
     },
     {
       "id": "sac_stack",
       "name": "Sacrifice Stacking",
-      "core": ["redemption"],
-      "followups": [["high_roller"], ["orphions_grace"]],
-      "trialPreference": ["all_in", "ultimate_sacrifice", "dying_light"],
-      "caps": { "sacMissionsBeforeChallenge30": 3 },
+      "core": [
+        "redemption"
+      ],
+      "followups": [
+        [
+          "high_roller"
+        ],
+        [
+          "orphions_grace"
+        ]
+      ],
+      "trialPreference": [
+        "all_in",
+        "ultimate_sacrifice",
+        "dying_light"
+      ],
+      "caps": {
+        "sacMissionsBeforeChallenge30": 3
+      },
       "notes": "All In converts each sac into +3 rerolls at run end. Sacs have diminishing returns (50%/75%/87.5%) so cap the stack at 3 and pivot to rerolls."
     },
     {
       "id": "speedrun",
       "name": "Token Assisted Speedrun",
-      "core": ["chronokinesis", "stasis"],
-      "followups": [["thrill_seeker"], ["high_roller", "redemption"]],
-      "beaconBias": { "red": 30, "green": -20 },
+      "core": [
+        "chronokinesis",
+        "stasis"
+      ],
+      "followups": [
+        [
+          "thrill_seeker"
+        ],
+        [
+          "high_roller",
+          "redemption"
+        ]
+      ],
+      "beaconBias": {
+        "red": 30,
+        "green": -20
+      },
       "expectedPulls": "2000+",
       "confidence": "low",
       "notes": "Highest ceiling per the source guide. Chronokinesis is a trap without time surplus, so this archetype needs a strict time floor."
     },
     {
+      "id": "ostinato",
+      "name": "Ostinato (Duplicate Boons)",
+      "core": [
+        "ostinato"
+      ],
+      "followups": [
+        [
+          "orphions_grace"
+        ],
+        [
+          "high_roller",
+          "redemption"
+        ]
+      ],
+      "boonPreference": [
+        "serendipity",
+        "heavensent"
+      ],
+      "beaconBias": {
+        "blue": 35,
+        "yellow": 15
+      },
+      "boonSelectionRule": "INVERTS normal boon advice: deliberately take DUPLICATE boon types (+1 pull each). Blue and yellow (boon/chest sources) are therefore up, not down.",
+      "notes": "Confirmed by playtest (Mujtaba, 2026-07-23): blues were the strongest beacon on an Ostinato run, because every boon taken is +1 pull per duplicate. Hard anti-synergy with Opal Offering (which wants high potency, not duplicates)."
+    },
+    {
       "id": "endgame",
       "name": "Endgame Cash-Out",
-      "core": ["knife_edge"],
-      "conflicts": ["sacrificial_ritual"],
+      "core": [
+        "knife_edge"
+      ],
+      "conflicts": [
+        "sacrificial_ritual"
+      ],
       "notes": "Not a run plan — a LATE pivot. Knife Edge pays 7 minus challengesRemaining, so it is worth zero until the run is nearly over. Never offer it as an early pick."
     },
     {
       "id": "universal",
       "name": "No Commitment",
-      "core": ["high_roller", "redemption", "complete_chaos"],
+      "core": [
+        "high_roller",
+        "redemption",
+        "complete_chaos"
+      ],
       "notes": "The correct fallback when no archetype has formed. These are stateless and never dead. Prefer them over a speculative archetype core when only 1 grey beacon remains."
     }
-  ]
+  ],
+  "beaconBiasNote": "beaconBias adds directly to a beacon's phase score (phase ranks are spaced by 10). Applied by evaluateOffer once an archetype is committed. Positive = prioritise, negative = downrank. These are opinions, tune freely."
 }

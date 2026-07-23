@@ -157,6 +157,63 @@ describe('mission offer evaluation', () => {
   });
 });
 
+describe('archetype-aware beacon priority (playtester feedback)', () => {
+  it('does NOT prioritise purple by default — only under curse stacking', () => {
+    // Mujtaba: "it prioritises purple no matter the run combo."
+    const neutral = evaluateOffer(runAt(15), [{ color: 'purple' }, { color: 'blue' }]);
+    const pN = neutral.ranked.find((r) => r.color === 'purple')!;
+    const bN = neutral.ranked.find((r) => r.color === 'blue')!;
+    // Farm phase lists purple above blue, but the gap is small without an archetype.
+    const gapNeutral = pN.score - bN.score;
+
+    const curse = evaluateOffer(
+      runAt(15, { missions: slots('equilibrium', 'porphyrophobia') }),
+      [{ color: 'purple' }, { color: 'blue' }],
+    );
+    const pC = curse.ranked.find((r) => r.color === 'purple')!;
+    const bC = curse.ranked.find((r) => r.color === 'blue')!;
+    // Under curse_stack, purple pulls decisively ahead.
+    expect(pC.score - bC.score).toBeGreaterThan(gapNeutral);
+    expect(curse.ranked[0]?.color).toBe('purple');
+    expect(pC.reasons.join(' ')).toMatch(/curse stacking/i);
+  });
+
+  it('prioritises blue on an Ostinato run', () => {
+    // Mujtaba: "I did an ostinato run so for me blues were better."
+    const a = evaluateOffer(runAt(15, { missions: slots('ostinato') }), [
+      { color: 'blue' },
+      { color: 'purple' },
+      { color: 'yellow' },
+    ]);
+    expect(a.ranked[0]?.color).toBe('blue');
+    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/ostinato/i);
+  });
+
+  it('prioritises yellow with a flying-chest engine', () => {
+    // Mujtaba: "if I had interest scheme plus hoarder, yellows would be better."
+    const a = evaluateOffer(
+      runAt(15, { missions: slots('interest_scheme', 'hoarder') }),
+      [{ color: 'yellow' }, { color: 'blue' }],
+    );
+    expect(a.ranked[0]?.color).toBe('yellow');
+    const blue = a.ranked.find((r) => r.color === 'blue')!;
+    // flying_chest downranks blue (Hoarder makes blue redundant).
+    expect(blue.reasons.join(' ')).toMatch(/avoids blue/i);
+  });
+
+  it('urges grey while mission slots remain open', () => {
+    const a = evaluateOffer(runAt(12), [{ color: 'grey' }, { color: 'blue' }]);
+    expect(a.ranked[0]?.color).toBe('grey');
+    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/missions early/i);
+  });
+
+  it('urges rainbow whenever one is offered', () => {
+    const a = evaluateOffer(runAt(15), [{ color: 'blue' }, { color: 'rainbow' }]);
+    expect(a.ranked[0]?.color).toBe('rainbow');
+    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/rainbow early/i);
+  });
+});
+
 describe('offer evaluation — hand-checked scenarios', () => {
   it('opening: orange beats blue and red', () => {
     const advice = evaluateOffer(runAt(1), [

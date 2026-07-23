@@ -14,7 +14,7 @@ import strategyJson from '../strategies/default.json';
 import missionsJson from '../data/missions.json';
 import archetypesJson from '../data/archetypes.json';
 import type { BeaconColor, OfferedBeacon, RunState } from './types';
-import { beaconChoices } from './engine';
+import { beaconChoices, pendingMission } from './engine';
 import { RUN_CONSTANTS } from './data';
 
 /* ------------------------------------------------------------------ */
@@ -99,7 +99,24 @@ interface Archetype {
   enablers?: string[];
   followups?: string[][];
   conflicts?: string[];
+  beaconBias?: Partial<Record<BeaconColor, number>>;
+  boonPreference?: string[];
   notes?: string;
+}
+
+/**
+ * The archetype a run has committed to, by best fit of held mission cores.
+ * Shared by beacon and mission scoring so both steer off the same plan.
+ */
+export function committedArchetype(state: RunState): Archetype | null {
+  const held = new Set(state.missions.map((m) => m.id));
+  let best: { a: Archetype; hits: number } | null = null;
+  for (const a of ARCHETYPES) {
+    if (a.id === 'universal') continue;
+    const hits = a.core.filter((c) => held.has(c)).length;
+    if (hits > 0 && (!best || hits > best.hits)) best = { a, hits };
+  }
+  return best?.a ?? null;
 }
 
 const ARCHETYPES = (archetypesJson as unknown as { archetypes: Archetype[] }).archetypes;
@@ -253,13 +270,11 @@ export function evaluateMissionOffer(state: RunState, offered: string[]): Missio
   const held = state.missions.map((m) => m.id);
   const heldSet = new Set(held);
 
-  // Which archetype are we on? Best fit by cores already held.
-  let best: { a: Archetype; hits: number } | null = null;
-  for (const a of ARCHETYPES) {
-    if (a.id === 'universal') continue;
-    const hits = a.core.filter((c) => heldSet.has(c)).length;
-    if (hits > 0 && (!best || hits > best.hits)) best = { a, hits };
-  }
+  // Same committed-archetype detection the beacon advisor uses.
+  const committed = committedArchetype(state);
+  const best = committed
+    ? { a: committed, hits: committed.core.filter((c) => heldSet.has(c)).length }
+    : null;
 
   const missing = requiredRoles().filter(
     (role) =>
@@ -404,6 +419,17 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
     activeSafety.push(rule);
   }
 
+  // The run's committed plan steers beacon priority, not just missions.
+  const archetype = committedArchetype(state);
+  const bias = archetype?.beaconBias ?? {};
+
+  // "Get all missions and rainbow as early as possible" (playtester request):
+  // grey is urgent while mission slots remain and its window is open; rainbow
+  // is urgent whenever it is legally offerable (it uses a ramping pity timer,
+  // so a visible rainbow should almost never be passed).
+  const missionSlotsLeft = RUN_CONSTANTS.maxMissions - state.missions.length;
+  const greyUrgent = missionSlotsLeft > 0 && !pendingMission(state);
+
   const ranked: RankedBeacon[] = offer.map((b) => {
     const reasons: string[] = [];
     let score: number;
@@ -417,6 +443,29 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
     } else {
       score = 5;
       reasons.push(`Phase "${priorityPhase?.id}": unlisted — neutral fallback`);
+    }
+
+    // --- archetype beacon bias ----------------------------------------
+    const biasVal = bias[b.color];
+    if (biasVal) {
+      score += biasVal;
+      reasons.push(
+        `${archetype?.name}: ${biasVal > 0 ? '+' : ''}${biasVal} (run combo ${
+          biasVal > 0 ? 'wants' : 'avoids'
+        } ${b.color})`,
+      );
+    }
+
+    // --- earliness urgency --------------------------------------------
+    if (b.color === 'grey' && greyUrgent) {
+      score += 35;
+      reasons.push(
+        `Get missions early — ${missionSlotsLeft} slot${missionSlotsLeft > 1 ? 's' : ''} still open`,
+      );
+    }
+    if (b.color === 'rainbow' && state.rainbowChallengesLeft === 0) {
+      score += 45;
+      reasons.push('Get rainbow early — ramping pity timer, do not pass it');
     }
 
     let suppressed = false;

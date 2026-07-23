@@ -61,7 +61,8 @@
       "when": { "path": "challengesRemaining", "eq": 1 },
       "suppress": ["yellow", "grey", "crimson", "blue", "chronokinesis", "sacrificial_ritual", "gambling_beast"],
       "stillWorks": ["red", "white", "purple", "darkGrey"],
-      "why": "Confirmed by the guide (Misc. Info): on the final challenge red/white beacons and purple/darkGrey pulls still work, while yellow, grey, crimson and BLUE beacons, plus new curses, Chronokinesis, Sacrificial Ritual and Gambling Beast procs, all do nothing.",
+      "why": "Does nothing on the final challenge.",
+      "detail": "Guide (Misc. Info): on the final challenge red/white beacons and purple/darkGrey pulls still work, while yellow, grey, crimson and blue beacons, plus new curses, Chronokinesis, Sacrificial Ritual and Gambling Beast procs, all do nothing.",
       "correctedFrom": "Blue was missing from this list — the advisor would have recommended a dead Blue Beacon on the last challenge."
     }
   ],

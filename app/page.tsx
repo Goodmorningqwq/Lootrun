@@ -526,7 +526,13 @@ export default function Tracker() {
                   <span className={`rounded px-2 py-0.5 text-sm font-semibold ${CHIP[r.color]}`}>
                     #{i + 1} {r.color} {r.vibrant ? '✨' : ''}
                   </span>
-                  <span className="text-xs text-zinc-500">score {r.score}</span>
+                  {r.suppressed ? (
+                    <span className="rounded bg-red-900/60 px-2 py-0.5 text-xs font-semibold text-red-200">
+                      ✕ dead pick
+                    </span>
+                  ) : (
+                    <span className="text-xs text-zinc-500">score {r.score}</span>
+                  )}
                   {!r.suppressed && (
                     <button
                       onClick={() => take(offer.findIndex((o) => o.color === r.color && (o.vibrant ?? false) === r.vibrant))}
