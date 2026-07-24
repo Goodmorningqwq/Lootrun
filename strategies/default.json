@@ -176,9 +176,11 @@
         ]
       },
       "beaconPriority": [
-        "white",
-        "orange",
+        "buffed:white",
+        "buffed:red",
         "aqua",
+        "orange",
+        "white",
         "red",
         "pink",
         "blue"
@@ -225,9 +227,11 @@
         "gte": 10
       },
       "beaconPriority": [
+        "buffed:rainbow",
         "rainbow",
-        "orange",
         "aqua",
+        "buffed:white",
+        "orange",
         "grey",
         "pink",
         "white",
@@ -270,10 +274,12 @@
         "gte": 20
       },
       "beaconPriority": [
+        "buffed:rainbow",
+        "buffed:crimson",
         "rainbow",
         "crimson",
-        "orange",
         "aqua",
+        "orange",
         "grey",
         "pink"
       ],
@@ -345,10 +351,13 @@
       "entryFrom": "fork:true",
       "intent": "Extend toward challenge 100 and cycle the combo.",
       "beaconPriority": [
+        "buffed:rainbow",
+        "buffed:white",
+        "aqua",
         "rainbow",
         "white",
         "orange",
-        "aqua",
+        "buffed:purple",
         "purple",
         "yellow",
         "red",
@@ -474,5 +483,6 @@
       "rawGreyUrgentFromChallenge": 25,
       "windowNote": "Grey stops appearing around challenge 30, so 25 leaves a few offers of slack. TUNABLE — set to taste."
     }
-  }
+  },
+  "priorityTokensNote": "A priority entry may be a plain colour or a boost-qualified one (buffed:/aqua:/boosted:/vibrant:). A boosted entry matches only when the beacon resolves above tier 0 (aqua bank OR rainbow), and outranks the plain entry. This expresses \"set up aqua, then take the boosted payoff\" directly in the list — aqua sits high, but a boosted white/rainbow sits higher still."
 }

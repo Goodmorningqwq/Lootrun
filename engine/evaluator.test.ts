@@ -15,6 +15,8 @@ import {
   validateStrategy,
   setStrategy,
   DEFAULT_STRATEGY,
+  parsePriorityEntry,
+  priorityIndexFor,
 } from './evaluator';
 import type { RunState } from './types';
 
@@ -264,6 +266,62 @@ describe('archetype-aware beacon priority (playtester feedback)', () => {
     const a = evaluateOffer(runAt(15), [{ color: 'blue' }, { color: 'rainbow' }]);
     expect(a.ranked[0]?.color).toBe('rainbow');
     expect(a.ranked[0]?.reasons.join(' ')).toMatch(/rainbow early/i);
+  });
+});
+
+describe('boosted priority tokens (buffed:/aqua:)', () => {
+  it('parses plain and boost-qualified entries', () => {
+    expect(parsePriorityEntry('white')).toEqual({ color: 'white', requiresBoost: false });
+    expect(parsePriorityEntry('buffed:white')).toEqual({ color: 'white', requiresBoost: true });
+    expect(parsePriorityEntry('aqua:rainbow')).toEqual({ color: 'rainbow', requiresBoost: true });
+  });
+
+  it('a boosted entry matches only above tier 0, and beats the plain entry', () => {
+    const list = ['buffed:white', 'aqua', 'white'];
+    expect(priorityIndexFor(list, 'white', 0)).toBe(2); // raw -> only the plain entry
+    expect(priorityIndexFor(list, 'white', 1)).toBe(0); // boosted -> the buffed entry
+    expect(priorityIndexFor(list, 'aqua', 0)).toBe(1);
+  });
+
+  it('with no aqua banked, aqua outranks a RAW white in extension', () => {
+    const a = evaluateOffer(runAt(6), [{ color: 'aqua' }, { color: 'white' }]);
+    expect(a.ranked[0]?.color).toBe('aqua');
+  });
+
+  it('a boosted white (aqua banked) outranks holding another aqua', () => {
+    const s = runAt(6, { pendingAqua: 1 }); // next beacon resolves tier 1
+    const a = evaluateOffer(s, [{ color: 'white' }, { color: 'aqua' }]);
+    expect(a.ranked[0]?.color).toBe('white');
+    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/as a boosted white/i);
+  });
+
+  it('rainbow makes white boosted too — not just aqua', () => {
+    // rainbowChallengesLeft > 0 grants vibrancy, so white resolves tier 1.
+    const s = runAt(15, { rainbowChallengesLeft: 5 });
+    const a = evaluateOffer(s, [{ color: 'white' }, { color: 'orange' }]);
+    // In rainbow_window, buffed:white sits above orange.
+    expect(a.ranked[0]?.color).toBe('white');
+  });
+
+  it('the validator rejects a priority typo', () => {
+    const bad = validateStrategy({
+      id: 'x',
+      goals: { runnable: { all: [] } },
+      safety: [],
+      phases: [{ id: 'p', beaconPriority: ['buffed:whte'] }],
+    });
+    expect(bad.ok).toBe(false);
+    if (!bad.ok) expect(bad.error).toMatch(/whte/);
+  });
+
+  it('the validator accepts valid boost tokens', () => {
+    const ok = validateStrategy({
+      id: 'x',
+      goals: { runnable: { all: [] } },
+      safety: [],
+      phases: [{ id: 'p', beaconPriority: ['buffed:white', 'aqua', 'white'] }],
+    });
+    expect(ok.ok).toBe(true);
   });
 });
 

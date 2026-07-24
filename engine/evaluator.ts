@@ -15,7 +15,7 @@ import missionsJson from '../data/missions.json';
 import trialsJson from '../data/trials.json';
 import archetypesJson from '../data/archetypes.json';
 import objectivesJson from '../data/mission_objectives.json';
-import type { BeaconColor, OfferedBeacon, RunState } from './types';
+import { BEACON_COLORS, type BeaconColor, type OfferedBeacon, type RunState } from './types';
 import { beaconChoices, pendingMission, resolveTier } from './engine';
 import { BEACONS, RUN_CONSTANTS } from './data';
 
@@ -97,9 +97,25 @@ export function validateStrategy(obj: unknown): { ok: true; strategy: Strategy }
   if (typeof s.goals !== 'object' || s.goals === null || !('runnable' in s.goals))
     return { ok: false, error: 'missing "goals.runnable"' };
   if (!Array.isArray(s.safety)) return { ok: false, error: '"safety" must be an array' };
+  const validColors = new Set<string>(BEACON_COLORS);
   for (const [i, p] of (s.phases as unknown[]).entries()) {
     if (typeof p !== 'object' || p === null || typeof (p as { id?: unknown }).id !== 'string')
       return { ok: false, error: `phase[${i}] needs a string "id"` };
+    const bp = (p as { beaconPriority?: unknown }).beaconPriority;
+    if (bp !== undefined) {
+      if (!Array.isArray(bp))
+        return { ok: false, error: `phase "${(p as { id: string }).id}": beaconPriority must be an array` };
+      for (const entry of bp) {
+        if (typeof entry !== 'string')
+          return { ok: false, error: `phase "${(p as { id: string }).id}": priority entries must be strings` };
+        const { color } = parsePriorityEntry(entry);
+        if (!validColors.has(color))
+          return {
+            ok: false,
+            error: `phase "${(p as { id: string }).id}": "${entry}" is not a valid beacon (colour "${color}" unknown)`,
+          };
+      }
+    }
   }
   return { ok: true, strategy: obj as Strategy };
 }
@@ -324,6 +340,53 @@ export interface Advice {
 }
 
 const SUPPRESSED_SCORE = -100;
+
+/**
+ * A beacon-priority entry is either a plain colour (`"white"`) or a
+ * boost-qualified one (`"buffed:white"`, `"aqua:white"`, `"boosted:white"`),
+ * which matches ONLY when that beacon resolves above tier 0 — from any source,
+ * aqua or rainbow alike.
+ *
+ * This lets a phase rank "a white worth taking" above "aqua" above "a raw
+ * white", so the setup-then-spend play is expressed in the priority list
+ * itself rather than inferred.
+ */
+const BUFFED_PREFIXES = new Set(['buffed', 'aqua', 'boosted', 'vibrant']);
+
+export function parsePriorityEntry(entry: string): {
+  color: string;
+  requiresBoost: boolean;
+} {
+  const i = entry.indexOf(':');
+  if (i < 0) return { color: entry, requiresBoost: false };
+  const prefix = entry.slice(0, i).toLowerCase();
+  return {
+    color: entry.slice(i + 1),
+    requiresBoost: BUFFED_PREFIXES.has(prefix),
+  };
+}
+
+/**
+ * Best (lowest) index in the priority list that this beacon satisfies.
+ * A boosted white matches both `buffed:white` and `white`, and takes the
+ * stronger of the two positions. Returns -1 when unlisted.
+ */
+export function priorityIndexFor(
+  priority: string[],
+  color: BeaconColor,
+  tier: number,
+): number {
+  let best = -1;
+  for (let i = 0; i < priority.length; i++) {
+    const raw = priority[i];
+    if (raw === undefined) continue;
+    const { color: c, requiresBoost } = parsePriorityEntry(raw);
+    if (c !== color) continue;
+    if (requiresBoost && tier <= 0) continue;
+    if (best < 0 || i < best) best = i;
+  }
+  return best;
+}
 
 /* ------------------------------------------------------------------ */
 /* Mission offers                                                      */
@@ -580,11 +643,16 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
     const reasons: string[] = [];
     let score: number;
 
-    const idx = priority.indexOf(b.color);
+    const beaconTier = resolveTier(state, b);
+    const idx = priorityIndexFor(priority, b.color, beaconTier);
     if (idx >= 0) {
       score = (priority.length - idx) * 10;
+      const entry = priority[idx];
+      const boosted = entry !== undefined && parsePriorityEntry(entry).requiresBoost;
       reasons.push(
-        `Phase "${priorityPhase?.id}": priority #${idx + 1} of ${priority.length}`,
+        `Phase "${priorityPhase?.id}": priority #${idx + 1} of ${priority.length}${
+          boosted ? ` (as a boosted ${b.color})` : ''
+        }`,
       );
     } else {
       score = 5;
