@@ -1,218 +1,247 @@
-# Plan — Playbook tree, visible mission→beacon logic, direct editing
+# Plan — Playbook, tree view, community editor
 
-Answering: *"either the strategy isn't well-rounded or the editor isn't displaying it"* —
-**both, but mostly the editor.** Evidence below, then the plan.
+Rewritten 2026-07-25 after expert review. Supersedes the first-mission-tree plan,
+which Mujtaba invalidated: *"theres like no such thing as popular first mission…
+combo matters most."*
 
 ---
 
-## 0. Diagnosis
+## 0. Settled — do not relitigate
 
-### 0.1 The mission→beacon link EXISTS. The editor shows none of it.
-
-Mission choice already shifts beacon priority through **three** channels:
-
-| Channel | Where it lives | Shown in editor? |
+| Question | Answer | Status |
 | --- | --- | --- |
-| Archetype bias (`flying_chest` → yellow +30, blue −10) | `data/archetypes.json` | ❌ |
-| Per-mission bias (Hoarder → yellow +25) | `data/missions.json` | ❌ |
-| Per-trial bias (Ultimate Sacrifice → blue −40) | `data/trials.json` | ❌ |
-| Phase priority (challenge-number based) | `strategies/default.json` | ✅ |
+| Tree rooted at first mission? | **No.** Combo matters, not order | model reshaped |
+| Combo shape | 4–5 mission **pool**, hold best 3 | ✅ |
+| Mission slots | **3** = 1 forced (ch 4) + 2 grey | ✅ shipped |
+| Combos | 4 + side combo + salvage, with explicit **cores** | ✅ shipped |
+| All 28 missions | verdicted core/pool/enabler/side/salvage/bloat/avoid/deleted | ✅ shipped |
+| Multi-combo bias | strongest advocate + objector × completeness | ✅ shipped |
+| Beleza Pura | offered aqua boosts the whole offer | ✅ shipped |
+| "Safe" | avoid conditional payoffs ("gambling aspects") | ✅ defined |
+| Long vs short run | user toggle — no derivable threshold | ✅ decided |
+| Advice quality | 80% win rate vs own bottom pick (`npm run validate`) | ✅ measured |
 
-The editor renders `strategies/default.json` **only**. Every mission-driven rule lives in
-`data/`, so the editor is showing roughly the *smaller half* of the strategy.
-
-**Root cause:** the architecture says `data/` = facts, `strategies/` = opinions. But
-archetype biases and follow-up orders are *opinions* that leaked into `data/`. The editor
-faithfully edits the opinion file; the opinions just aren't all in it.
-
-### 0.2 The mission→next-mission link exists too, and is also hidden
-
-`archetypes.json` carries `followups` as ordered tiers — e.g. curse_stack is
-`[[high_roller, redemption], [inner_peace, orphions_grace], [opal_offering]]`. The
-mission-pick advisor uses it. The editor never shows it.
-
-### 0.3 Measured gaps in the strategy itself
-
-Not just a display problem — three real holes:
-
-- **7 of 28 missions belong to no line at all**: Cleansing Greed, Route Indigo, High
-  Spirits, Beleza Pura, Requiem, King's Court, Sacrificial Ritual. Taking one first commits
-  you to nothing.
-- **2 archetypes have empty `beaconBias`** (`radiance`, `sac_stack`) — they identify a
-  combo but never steer a beacon.
-- **84 of 3276 possible first-mission offers (2.6%) give the advisor zero signal** — every
-  option scores "No archetype fit or role gap". Verified by enumerating all `28C3` offers.
-  Example: `Cleansing Greed + Materialism + Orphion's Grace` — three real missions, no
-  guidance. This is exactly the catch-all hole you predicted.
+**Known ceiling:** the simulator's `E[pulls]` ignores boons and mission effects,
+so it is blind to most of what the advisor optimises for. The 80% win rate is
+signal; the +3.4% pull delta is **not** a usable effect size. Weight tuning is
+blocked on Step 5.
 
 ---
 
-## 1. Core design decision: **generate the tree, don't author it**
+## 1. The model
 
-The obvious move is to hand-write a tree in JSON. **Reject it.** The advisor's score is a
-sum of ~8 contributions (phase, activation, archetype, per-mission, per-trial, tactics,
-urgency, safety). A hand-drawn tree saying "Hoarder → take yellow" would silently become a
-lie the moment a trial or tactic outweighs it — and nobody would notice, because the
-drawing and the engine are separate artifacts.
+```
+        ┌─ combos (cores + pool) ──────────────┐
+offer → │  which combos does this keep alive?  │ → ranked picks + reasons
+        └─ verdicts · roles · tactics ─────────┘
+```
 
-**Instead:** build the tree by *running the real evaluator* on synthetic states.
+Four operations, taken from how Mujtaba actually plays:
+
+1. **Keep alive** — take the piece that preserves the most valuable reachable combos
+2. **Prune** — drop combos an offer has made unreachable (*"I remove jesters trick from the equation"*)
+3. **Enable** — when no combo piece is offered, buy flexibility (*"I take beleza pura… more boosted yellows in the future"*)
+4. **Re-plan** — when a combo dies, pivot to one reachable from what you already hold (*"now I cant go the yellow ostinato route"*)
+
+Only #1 is fully implemented. #2–#4 are Steps 2–3.
+
+---
+
+## 2. The remaining modelling gap — and it is not "least-bad"
+
+35 of 3276 first-mission offers (1.1%) still produce **zero signal**. Measured
+which missions cause it:
+
+```
+Materialism · Orphion's Grace · Equilibrium · Inner Peace
+Optimism · Beleza Pura · Sacrificial Ritual
+```
+
+**All seven are `pool` or `enabler`.** That is not a random catch-all hole — it
+is a structural one. A `core` scores via *"Starts combo X"*; `avoid`/`bloat`
+score via verdict; `salvage` scores as universal. But a **pool member offered
+before you hold its core scores nothing**, because `followups` only apply once
+committed.
+
+So the fix is principled, not a fallback: score a pool/enabler mission by the
+combos it *would* contribute to, discounted because the core is not yet held.
+That is exactly the speculative commitment Mujtaba described — taking Ostinato
+and *"praying"* for Interest Scheme and Hoarder later.
+
+```
+speculativeScore(m) = max over combos C containing m of
+      value(C) × P(reach C | slots left, pieces still needed)
+```
+
+`P(reach)` need not be exact — monotonic in *pieces needed* and *slots left* is
+enough, and it makes the advisor prefer combos that are closer to completable.
+This closes all 35 **and** improves the many offers that currently score a pool
+member only by role-gap luck.
+
+---
+
+## 3. Work steps
+
+Each step lists files, change, and an acceptance gate that must pass before moving on.
+
+### Step 1 — Playbook migration (unblocks community editing)
+
+**Why first:** combos live in `data/archetypes.json` today. The community must
+be able to add and export their own, so combos must move into the **strategy**
+file, which is what import/export already round-trips.
+
+| File | Change |
+| --- | --- |
+| `strategies/default.json` | add `playbook: { lines: [...] }`, absorbing `data/archetypes.json` |
+| `engine/evaluator.ts` | read lines from `strategy.playbook.lines`, fall back to the bundled default when absent |
+| `app/store.ts` | persist migration v6 |
+| `data/archetypes.json` | keep one release as the fallback source, marked deprecated |
+
+**Migration safety (this bit has bitten us twice):** a user's exported strategy
+has no `playbook` key. Merging must be *field-wise against the default*, never
+wholesale replacement, or their advice silently loses every combo. Rule:
 
 ```ts
-buildPlaybookTree(strategy, depth) → TreeNode[]
+const lines = strategy.playbook?.lines ?? DEFAULT_STRATEGY.playbook.lines;
 ```
 
-Each node constructs a `RunState` (challenge N, these missions held+activated, these
-trials) and calls the actual `evaluateOffer` / `evaluateMissionOffer`. The rendered
-priorities are therefore **whatever the advisor will really say**, by construction.
+plus a `schemaVersion` on the strategy so future additions are detectable.
 
-Two payoffs beyond honesty:
-- The same function powers the **coverage test** (§5) — the picture and the proof share code.
-- Editing a weight and watching the tree redraw is instant feedback that a JSON diff can't give.
+**Gate:** 184 tests green; a strategy exported *before* this step still produces
+identical advice after it. Add a test that asserts exactly that.
+
+### Step 2 — Speculative pool/enabler scoring
+
+| File | Change |
+| --- | --- |
+| `engine/evaluator.ts` | `speculativeCombos(state, missionId)` → `{line, needed, reachable}[]` |
+| | apply in `evaluateMissionOffer` for `pool`/`enabler` verdicts |
+| `strategies/default.json` | `speculativeWeight` knob (editable) |
+
+**Gate:** the 3276-offer sweep reports **0** blind offers, and no offer
+recommends an `avoid`/`deleted` mission over a live one. Promote that sweep from
+a throwaway probe to a committed test.
+
+### Step 3 — Prune and re-plan
+
+| File | Change |
+| --- | --- |
+| `engine/evaluator.ts` | `comboStatus(state)` → `alive / dead / complete` per line |
+| | dead when: needed pieces > slots left, or a required core is unreachable |
+| `app/page.tsx` | show live combos with progress; strike through dead ones |
+
+**Gate:** a scripted run reproducing Mujtaba's worked example (Ostinato → Beleza
+Pura → the Orphion's/Porph fork) marks the yellow-Ostinato route **dead** at the
+same point he does, and surfaces both pivots.
+
+### Step 4 — Tree view (generated, never authored)
+
+`buildPlaybookTree(strategy, depth)` constructs synthetic `RunState`s and calls
+the **real** `evaluateOffer` / `evaluateMissionOffer` at each node.
+
+**Why generated:** a hand-drawn tree saying "Hoarder → take yellow" becomes a
+lie the moment a trial or tactic outweighs it, and nobody notices, because the
+drawing and the engine are separate artifacts. Generation makes the tree
+*whatever the advisor will actually say*, and the same function backs the
+coverage test — picture and proof share code.
+
+**Honest scope:** the tree shows the **named lines**; the coverage test proves
+the unnamed remainder is caught. It cannot "plot all" — ~250k combinations
+exist. Say so in the UI rather than implying completeness.
+
+**Gate:** every rendered priority equals a live `evaluateOffer` call for that node.
+
+### Step 5 — Simulator: model boons and missions
+
+Unblocks weight tuning, which is currently guesswork.
+
+| File | Change |
+| --- | --- |
+| `engine/simulator.ts` | apply mission effects during rollout (Hoarder→boons, Interest Scheme→chests, Opal→pulls) |
+| | credit boons toward pulls |
+
+**Gate:** `npm run validate` effect size becomes meaningful — top pick beats
+bottom pick by a margin that moves when weights change. Then, and only then,
+tune the verdict/bias magnitudes against it.
+
+### Step 6 — Editor (see §4)
 
 ---
 
-## 2. Data model — the playbook
+## 4. Editor specification
 
-### 2.1 Move lines into the strategy
+Two independent halves. **The first ships today** — it needs nothing from Steps 1–5.
 
-Absorb `data/archetypes.json` into `strategies/default.json` as `playbook.lines[]`, so the
-opinion layer is one editable file. Per-mission and per-trial bias **stay** in `data/`
-(they're defensible from the effect text — "Hoarder needs chests" is near-factual) but the
-editor displays them **read-only** so nothing is invisible.
+### 4a. Direct manipulation of phase priorities *(no dependencies)*
 
-### 2.2 Line schema
+`app/editor/page.tsx`, phase cards.
 
-```jsonc
-{
-  "id": "flying_chest",
-  "name": "Flying Chest Engine",
-  "popularity": 1,                        // ordering in the tree; 1 = headline line
-  "entry":    ["hoarder", "interest_scheme", "jesters_trick"],
-  "enablers": ["materialism"],
-  "followups": [["orphions_grace"], ["materialism"], ["high_roller", "redemption"]],
-  "beaconBias": { "yellow": 30, "blue": -10 },
-  "trialPreference": ["side_hustle", "monochromokopia"],
-  "boonPreference": ["serendipity", "looter"],
-  "conflicts": ["chronokinesis"],         // non-flying chests — does not feed this line
-  "fallsBackTo": "universal"              // explicit, was implicit
-}
-```
+| Control | Behaviour |
+| --- | --- |
+| **Drag chip** | reorder within `beaconPriority`. HTML5 DnD (`draggable` + `onDragStart/Over/Drop`), ~40 lines, no dependency. Editor is desktop-use, so weak touch support is acceptable. |
+| **Click chip** | cycle plain ↔ `buffed:` |
+| **✕ on chip** | remove from the list |
+| **`+` in a phase** | dropdown of the 13 beacons, appends |
+| **Number inputs** | tactic weights, verdict scores, bias values |
 
-`beaconBias` (composable nudges) is kept rather than a hard per-line `beaconPriority`,
-because summing is what gives combination coverage. A line MAY set
-`beaconPriorityOverride` when it genuinely needs a different order; the tree shows which
-lines do.
+**The `buffed:` ordering trap.** The same colour can appear twice
+(`buffed:white` and `white`), and dragging raw `white` *above* `buffed:white` is
+incoherent — a boosted white always outranks a raw one. The UI must prevent that
+drop and explain why, rather than silently accepting a list that can never fire.
 
-### 2.3 Fallback chain — the catch-all
+Every mutation → rewrite strategy object → `applyStrategy()` → tree, advice and
+JSON all redraw. JSON textarea stays two-way synced.
 
-Ordered, explicit, terminating:
+### 4b. Combo editing *(needs Step 1)*
 
-1. **Named line** — an entry mission was offered.
-2. **Role-gap pick** — no line, but a mission fills an unmet `runnable` role (boon/pull generator).
-3. **Universal** — High Roller / Redemption / Complete Chaos: stateless, never dead.
-4. **Least-bad** — nothing above matched: rank by per-mission bias alignment with the
-   current phase, and *say so*: "no line fits; taking the least conflicting option."
+| Control | Behaviour |
+| --- | --- |
+| **`+ combo`** | new line: name, cores, pool, bias, trials |
+| **`+ mission`** on a line | add to core or pool |
+| **`+ branch`** | a route within a line (Ostinato's yellow vs blue) |
+| **Verdict override** | per-mission, per-strategy |
 
-Level 4 is new and is what closes the 84 blind offers. It can never be empty because every
-mission has *some* bias or role.
+### 4c. Safety rails for community strategies
 
-### 2.4 Fix the three measured gaps
-
-- Assign the 7 orphan missions to lines or a new `support` line (Route Indigo and Beleza
-  Pura are strong enough to anchor their own).
-- Give `radiance` and `sac_stack` real `beaconBias`.
-- Add `followups` to lines that have none.
+- **Diff vs default** — "you have changed 6 things"; the whole point is tuning, so drift must be visible
+- **Validation on apply** — already rejects bad colours; extend to line references
+- **Named presets** — save/load several, not just one
+- **Share via URL** — compressed strategy in the fragment, no backend
 
 ---
 
-## 3. Tree view
+## 5. Risks
 
-Replaces the flat phase list as the editor's primary visual. Phases move to a secondary tab.
-
-```
-Challenge 4 — forced mission choice (3 of 28 offered)
-│
-├── ★ Flying Chest Engine            entry: Hoarder · Interest Scheme · Jester's Trick
-│   ├── beacons become    yellow 90 ▸ orange 50 ▸ aqua 40 ▸ … (blue −10)   [computed]
-│   ├── next mission      Materialism ▸ Orphion's Grace ▸ High Roller
-│   ├── trials            Side Hustle ▸ Monochromokopia
-│   ├── ⚠ conflicts       Chronokinesis (non-flying chests only)
-│   └── ↳ 2nd mission = Materialism →  beacons: yellow 100 ▸ …   [expandable]
-│
-├── ★ Curse Stacking                 entry: Equilibrium · Porphyrophobia
-│   └── …
-│
-├── ☆ Radiance / Sac Stack / Speedrun / Ostinato / Reroll Spam …
-│
-└── ⓘ FALLBACK — nothing above offered            covers 84 offers (2.6%)
-    ├── role gap?  → take the boon/pull generator
-    ├── universal? → High Roller ▸ Redemption ▸ Complete Chaos
-    └── least-bad  → best per-mission bias for the current phase
-```
-
-Interactions: expand a line to depth 2–3; hover a beacon score to see its contribution
-breakdown (the reason lines already exist); toggle "assume trial X" to watch the tree
-re-compute.
+| Risk | Mitigation |
+| --- | --- |
+| **Weights are unvalidated guesses** — the single biggest weakness | Step 5, then tune against a real effect size |
+| Playbook migration silently drops a user's combos | field-wise merge + a before/after advice-equality test |
+| Tree implies completeness it cannot have | state the named-lines scope in the UI |
+| Community strategies produce bad advice with no feedback | diff-vs-default; `npm run validate` runnable on any strategy |
+| Expert verdicts are one person's opinion | they are per-strategy and overridable — that is the point of 4c |
 
 ---
 
-## 4. Direct manipulation (the drag-and-drop ask)
+## 6. Still unknown
 
-Applies to phase priorities **and** line biases.
-
-- **Drag to reorder** chips within a priority list. Hand-rolled HTML5 DnD
-  (`draggable` + `onDragStart/onDragOver/onDrop`) — ~40 lines, no new dependency. The
-  editor is desktop-use, so HTML5 DnD's weak touch support is acceptable.
-- **Click a chip** → cycle plain ↔ `buffed:` (the boost token from the last commit).
-- **× on a chip** → remove. **`+`** → add from a beacon dropdown.
-- **Number inputs** for tactic weights and line biases (slider + numeric).
-- Every mutation rewrites the strategy object → `applyStrategy` → tree and JSON both
-  redraw. JSON textarea stays two-way synced.
+- **6 missions + 1 trial from 2.2.1** — undocumented anywhere; in-game only
+- **Materialism, Orphion's Grace** verdicts are my inference, flagged in data
+- **Run Combos "passive combo" section** — Mujtaba referenced it; tab URL not supplied
+- **Whether verdicts hold across patches** — no re-validation process yet
 
 ---
 
-## 5. Coverage guarantee — make "catch-all" provable
-
-A test, not a hope:
+## 7. Order, and why
 
 ```
-for every 3-subset of the 28 missions (3276):
-    advice = evaluateMissionOffer(state, offer)
-    assert advice.ranked[0] has a concrete reason (line / role-gap / universal / least-bad)
-    assert no offer falls through with zero signal
+1 Playbook migration ──┬─→ 4b combo editing
+2 Speculative scoring ─┘
+3 Prune / re-plan ─────→ 4 Tree view
+5 Simulator ───────────→ weight tuning
+
+4a drag-to-reorder ─── independent, ship first
 ```
 
-Currently **84 fail**. Target: **0**. The same enumeration runs at depth 2 (given each
-first pick, all second offers) sampled rather than exhaustive.
-
-Second test: **no line is unreachable** — every line's `entry` must be satisfiable, and
-every mission must appear in at least one line or be explicitly marked `support`.
-
----
-
-## 6. Sequencing
-
-| Step | Work | Gate |
-| --- | --- | --- |
-| **1** | Coverage test (§5) as a failing test — locks in the 84 | test red, count visible |
-| **2** | Playbook schema + absorb archetypes.json; add fallback level 4 | coverage → 0 |
-| **3** | Fill the 3 gaps: 7 orphans, 2 empty biases, missing followups | every mission in a line |
-| **4** | `buildPlaybookTree()` in `engine/` | unit-tested, no UI yet |
-| **5** | Tree view in the editor | mission→beacon finally visible |
-| **6** | Drag-to-reorder + chip toggles + weight inputs | the editing ask |
-| **7** | Read-only panels for `data/` mission & trial biases | nothing invisible |
-
-Steps 1–3 are pure engine/data and independently valuable — they fix real advice, not just
-the picture. 4–5 deliver the tree. 6 is the drag-and-drop.
-
----
-
-## 7. Decisions I'd want your call on
-
-1. **Which lines are "popular"?** I'd headline Flying Chest, Curse Stack, Ostinato,
-   Reroll Spam, Speedrun — but you and Mujtaba play these; my ranking is inferred from the
-   guide, not from play.
-2. **Route Indigo and Beleza Pura** are currently orphans with strong biases (+25/+25 and
-   aqua +30). Own line each, or support picks?
-3. **Tree depth** — 2 (first + second mission) is readable; 3 covers a full run but is wide.
-   Default 2, expandable to 3?
+**4a ships first** because it is the longest-outstanding request and has no
+dependencies. Steps 1–3 then make the tree worth drawing; Step 5 is what finally
+turns the weights from guesses into something measured.
