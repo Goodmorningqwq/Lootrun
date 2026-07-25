@@ -96,22 +96,74 @@ describe('phase resolution', () => {
   });
 });
 
+describe('expert verdicts (Mujtaba 2026-07-25)', () => {
+  it('never recommends an avoid-tier mission over a real one', () => {
+    // Gourmand, Stasis, Backup Beat, Requiem, King's Court = "shit".
+    for (const bad of ['gourmand', 'stasis', 'backup_beat', 'requiem', 'kings_court']) {
+      const a = evaluateMissionOffer(runAt(10), [bad, 'high_roller']);
+      expect(a.ranked[0]?.id, `${bad} should lose to High Roller`).toBe('high_roller');
+      const b = a.ranked.find((r) => r.id === bad)!;
+      expect(b.reasons.join(' ')).toMatch(/never take this/i);
+    }
+  });
+
+  it('ranks a rejected mission below even a bloat one', () => {
+    const a = evaluateMissionOffer(runAt(10), ['gourmand', 'cleansing_greed']);
+    expect(a.ranked[0]?.id).toBe('cleansing_greed');
+  });
+
+  it('Chronokinesis is treated as non-existent', () => {
+    const a = evaluateMissionOffer(runAt(10), ['chronokinesis', 'high_spirits']);
+    expect(a.ranked[0]?.id).toBe('high_spirits');
+    expect(a.ranked.find((r) => r.id === 'chronokinesis')!.reasons.join(' ')).toMatch(
+      /ignore that this exists/i,
+    );
+  });
+
+  it('rejected missions no longer steer beacon priority', () => {
+    // Gourmand used to carry pink +30; Chronokinesis green +15.
+    const held = [{ id: 'gourmand', fulfilled: true }];
+    const a = evaluateOffer(runAt(15, { missions: held }), [{ color: 'pink' }]);
+    expect(a.ranked[0]?.reasons.join(' ')).not.toMatch(/Gourmand/);
+  });
+
+  it('side combo: Knife Edge is weak alone but good with Thrill Seeker', () => {
+    const alone = evaluateMissionOffer(runAt(10, { challengesRemaining: 5 }), ['knife_edge']);
+    expect(alone.ranked[0]?.reasons.join(' ')).toMatch(/Only viable paired/i);
+
+    const paired = evaluateMissionOffer(
+      runAt(10, { challengesRemaining: 5, missions: slots('thrill_seeker') }),
+      ['knife_edge'],
+    );
+    expect(paired.ranked[0]!.score).toBeGreaterThan(alone.ranked[0]!.score);
+    expect(paired.ranked[0]?.reasons.join(' ')).toMatch(/side combo works/i);
+  });
+
+  it('Beleza Pura downranks aqua rather than boosting it', () => {
+    const a = evaluateOffer(runAt(15, { missions: slots('beleza_pura') }), [{ color: 'aqua' }]);
+    const why = a.ranked[0]!.reasons.join(' ');
+    expect(why).toMatch(/Beleza Pura: -/);
+    expect(why).toMatch(/wasted/i);
+  });
+});
+
 describe('mission offer evaluation', () => {
   it('with no archetype yet, prefers a core that can still be built', () => {
-    const a = evaluateMissionOffer(runAt(4), ['equilibrium', 'stasis', 'high_spirits']);
+    // Porphyrophobia is combo 3's core; Stasis and High Spirits are rejected tiers.
+    const a = evaluateMissionOffer(runAt(4), ['porphyrophobia', 'stasis', 'high_spirits']);
     expect(a.committed).toBeNull();
-    expect(a.ranked[0]?.id).toBe('equilibrium');
+    expect(a.ranked[0]?.id).toBe('porphyrophobia');
     expect(a.ranked[0]?.reasons.join(' ')).toMatch(/Starts/i);
   });
 
-  it('once committed, ranks that archetype’s core above generic picks', () => {
+  it('once committed, ranks that archetype’s pool above generic picks', () => {
+    // Porphyrophobia is THE core of combo 3; Equilibrium is a pool pick under it.
     const a = evaluateMissionOffer(
-      runAt(10, { missions: slots('equilibrium') }),
-      ['porphyrophobia', 'high_spirits'],
+      runAt(10, { missions: slots('porphyrophobia') }),
+      ['radiant_hunter', 'high_spirits'],
     );
     expect(a.committed?.id).toBe('curse_stack');
-    expect(a.ranked[0]?.id).toBe('porphyrophobia');
-    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/core/i);
+    expect(a.ranked[0]?.id).toBe('radiant_hunter');
   });
 
   it('warns when a pick fights the committed archetype', () => {
@@ -211,10 +263,10 @@ describe('archetype-aware beacon priority (playtester feedback)', () => {
     );
     const pC = curse.ranked.find((r) => r.color === 'purple')!;
     const bC = curse.ranked.find((r) => r.color === 'blue')!;
-    // Under curse_stack, purple pulls decisively ahead.
+    // Under the purple combo, purple pulls decisively ahead.
     expect(pC.score - bC.score).toBeGreaterThan(gapNeutral);
     expect(curse.ranked[0]?.color).toBe('purple');
-    expect(pC.reasons.join(' ')).toMatch(/curse stacking/i);
+    expect(pC.reasons.join(' ')).toMatch(/Purple: \+/i); // "Combo 3 — Purple: +40 …"
   });
 
   it('prioritises blue on an Ostinato run', () => {

@@ -484,5 +484,26 @@
       "windowNote": "Grey stops appearing around challenge 30, so 25 leaves a few offers of slack. TUNABLE — set to taste."
     }
   },
-  "priorityTokensNote": "A priority entry may be a plain colour or a boost-qualified one (buffed:/aqua:/boosted:/vibrant:). A boosted entry matches only when the beacon resolves above tier 0 (aqua bank OR rainbow), and outranks the plain entry. This expresses \"set up aqua, then take the boosted payoff\" directly in the list — aqua sits high, but a boosted white/rainbow sits higher still."
+  "priorityTokensNote": "A priority entry may be a plain colour or a boost-qualified one (buffed:/aqua:/boosted:/vibrant:). A boosted entry matches only when the beacon resolves above tier 0 (aqua bank OR rainbow), and outranks the plain entry. This expresses \"set up aqua, then take the boosted payoff\" directly in the list — aqua sits high, but a boosted white/rainbow sits higher still.",
+  "verdictScores": {
+    "why": "Expert classification of every mission (data/missions.json `verdict`). Applied to MISSION ranking. Editable — a community strategy can disagree with any of these.",
+    "core": 0,
+    "pool": 0,
+    "enabler": 0,
+    "side": 0,
+    "salvage": 0,
+    "bloat": -15,
+    "avoid": -120,
+    "deleted": -250,
+    "note": "Positive tiers are 0 here because archetype fit / role-gap scoring already rewards them; these values exist to PENALISE the rejected tiers, which nothing else did."
+  },
+  "sideComboRule": {
+    "why": "Thrill Seeker and Knife Edge are only viable as a PAIR — neither is worth a mission slot alone.",
+    "pair": [
+      "thrill_seeker",
+      "knife_edge"
+    ],
+    "togetherBonus": 40,
+    "alonePenalty": -60
+  }
 }

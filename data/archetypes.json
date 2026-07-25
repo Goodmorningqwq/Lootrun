@@ -5,7 +5,7 @@
   "archetypes": [
     {
       "id": "flying_chest",
-      "name": "Flying Chest Engine",
+      "name": "Combo 1 — Chest / Ostinato",
       "core": [
         "jesters_trick",
         "interest_scheme",
@@ -16,10 +16,10 @@
       ],
       "followups": [
         [
-          "orphions_grace"
+          "materialism"
         ],
         [
-          "materialism"
+          "orphions_grace"
         ],
         [
           "high_roller",
@@ -33,33 +33,42 @@
         "midas_touch"
       ],
       "trialPreference": [
-        "side_hustle",
-        "monochromokopia"
+        "hubris",
+        "treasury_bill"
       ],
       "beaconBias": {
         "yellow": 30,
         "blue": -10
       },
-      "notes": "Self-sustaining pull->chest->boon loop. Hoarder makes Blue Beacons largely redundant, so blue is downranked once online."
+      "notes": "Self-sustaining pull->chest->boon loop. Hoarder makes Blue Beacons largely redundant, so blue is downranked once online.",
+      "cores": [
+        [
+          "interest_scheme",
+          "jesters_trick"
+        ],
+        [
+          "ostinato",
+          "hoarder"
+        ]
+      ],
+      "coresNote": "TWO independent cores. Interest Scheme + Jester's is good alone; Ostinato + Hoarder is a separate pull generator. With 3 slots you take one pair plus a piece of the other."
     },
     {
       "id": "curse_stack",
-      "name": "Curse Stacking",
+      "name": "Combo 3 — Purple",
       "core": [
-        "equilibrium",
         "porphyrophobia"
       ],
       "followups": [
         [
+          "radiant_hunter"
+        ],
+        [
+          "sacrificial_ritual"
+        ],
+        [
           "high_roller",
           "redemption"
-        ],
-        [
-          "inner_peace",
-          "orphions_grace"
-        ],
-        [
-          "opal_offering"
         ]
       ],
       "boonPreference": [
@@ -68,8 +77,8 @@
         "lightbringer"
       ],
       "trialPreference": [
-        "all_in",
-        "dying_light"
+        "chronotrigger",
+        "lights_out"
       ],
       "beaconBias": {
         "purple": 40,
@@ -88,65 +97,23 @@
         }
       ],
       "buffedIn": "2.2.1 doubled Equilibrium (+50%->+100%, cap +300%->+600%). This archetype is now materially stronger than community guides rate it.",
-      "notes": "Inner Peace belongs here despite sounding contradictory: it halves curse DIFFICULTY while curse COUNT payoffs still fire."
-    },
-    {
-      "id": "reroll_spam",
-      "name": "Beacon Reroll Spam",
-      "core": [
-        "gourmand",
-        "optimism"
+      "notes": "Inner Peace belongs here despite sounding contradictory: it halves curse DIFFICULTY while curse COUNT payoffs still fire.",
+      "pickOneOf": [
+        "complete_chaos",
+        "equilibrium",
+        "inner_peace"
       ],
-      "followups": [
-        [
-          "high_roller",
-          "redemption"
-        ],
-        [
-          "backup_beat"
-        ],
-        [
-          "thrill_seeker"
-        ],
-        [
-          "orphions_grace"
-        ]
-      ],
-      "boonPreference": [
-        "heavensent",
-        "persnickety"
-      ],
-      "beaconBias": {
-        "pink": 50,
-        "orange": 30
-      },
-      "notes": "Gourmand + Optimism turns each reroll into a directed search for rainbow/orange. Requires reroll income — Pink Beacon (new in 2.2.0) made this archetype substantially stronger."
-    },
-    {
-      "id": "radiance",
-      "name": "Radiance (2.2.0)",
-      "core": [
-        "radiant_hunter"
-      ],
-      "followups": [
-        [
-          "high_roller",
-          "redemption"
-        ],
-        [
-          "orphions_grace"
-        ]
-      ],
-      "trialPreference": [
-        "lights_out"
-      ],
-      "confidence": "low",
-      "notes": "NEW in 2.2.0 and under-documented. Lights Out feeds Radiance curses; Radiant Hunter converts them to pulls. Encode with low confidence and flag in UI until validated by real runs."
+      "pickOneOfNote": "Expert: \"between complete chaos equilibrium and inner peace its upto the user\". Equilibrium specifically when death risk is real; unnecessary in long runs due to Chronotrigger.",
+      "trialPreferenceShortRun": [
+        "lights_out",
+        "gambling_beast"
+      ]
     },
     {
       "id": "sac_stack",
-      "name": "Sacrifice Stacking",
+      "name": "Salvage — raw reroll / sac",
       "core": [
+        "high_roller",
         "redemption"
       ],
       "followups": [
@@ -158,42 +125,18 @@
         ]
       ],
       "trialPreference": [
-        "all_in",
-        "ultimate_sacrifice",
-        "dying_light"
+        "gambling_beast"
       ],
       "caps": {
         "sacMissionsBeforeChallenge30": 3
       },
-      "notes": "All In converts each sac into +3 rerolls at run end. Sacs have diminishing returns (50%/75%/87.5%) so cap the stack at 3 and pivot to rerolls."
-    },
-    {
-      "id": "speedrun",
-      "name": "Token Assisted Speedrun",
-      "core": [
-        "chronokinesis",
-        "stasis"
-      ],
-      "followups": [
-        [
-          "thrill_seeker"
-        ],
-        [
-          "high_roller",
-          "redemption"
-        ]
-      ],
-      "beaconBias": {
-        "red": 30,
-        "green": -20
-      },
-      "expectedPulls": "2000+",
-      "confidence": "low",
-      "notes": "Highest ceiling per the source guide. Chronokinesis is a trap without time surplus, so this archetype needs a strict time floor."
+      "notes": "All In converts each sac into +3 rerolls at run end. Sacs have diminishing returns (50%/75%/87.5%) so cap the stack at 3 and pivot to rerolls.",
+      "coreNote": "Expert: for a failing run, add missions that give reroll and sac RAW (unconditional). High Roller and Redemption are the only two.",
+      "trialPreferenceWhy": "Converts a dead run into end-reward rerolls. Or just ditch the run."
     },
     {
       "id": "ostinato",
-      "name": "Ostinato (Duplicate Boons)",
+      "name": "Ostinato (pull generator — combo 1b / combo 6)",
       "core": [
         "ostinato"
       ],
@@ -215,18 +158,23 @@
         "yellow": 15
       },
       "boonSelectionRule": "INVERTS normal boon advice: deliberately take DUPLICATE boon types (+1 pull each). Blue and yellow (boon/chest sources) are therefore up, not down.",
-      "notes": "Confirmed by playtest (Mujtaba, 2026-07-23): blues were the strongest beacon on an Ostinato run, because every boon taken is +1 pull per duplicate. Hard anti-synergy with Opal Offering (which wants high potency, not duplicates)."
-    },
-    {
-      "id": "endgame",
-      "name": "Endgame Cash-Out",
-      "core": [
-        "knife_edge"
-      ],
-      "conflicts": [
-        "sacrificial_ritual"
-      ],
-      "notes": "Not a run plan — a LATE pivot. Knife Edge pays 7 minus challengesRemaining, so it is worth zero until the run is nearly over. Never offer it as an early pick."
+      "notes": "Confirmed by playtest (Mujtaba, 2026-07-23): blues were the strongest beacon on an Ostinato run, because every boon taken is +1 pull per duplicate. Hard anti-synergy with Opal Offering (which wants high potency, not duplicates).",
+      "routes": [
+        {
+          "id": "yellow",
+          "needs": [
+            "hoarder"
+          ],
+          "note": "boons via flying chests"
+        },
+        {
+          "id": "blue",
+          "needs": [
+            "orphions_grace"
+          ],
+          "note": "boons via blue beacons — the pivot when the chest route dies"
+        }
+      ]
     },
     {
       "id": "universal",
@@ -237,7 +185,112 @@
         "complete_chaos"
       ],
       "notes": "The correct fallback when no archetype has formed. These are stateless and never dead. Prefer them over a speculative archetype core when only 1 grey beacon remains."
+    },
+    {
+      "id": "opal",
+      "name": "Combo 2 — Opal",
+      "popularity": 1,
+      "core": [
+        "opal_offering"
+      ],
+      "coreNote": "Expert: \"opal is its own core, everything runs on opal\" — and \"u could practically run anything on it\". Low-conditionality, hence SAFE.",
+      "followups": [
+        [
+          "sacrificial_ritual"
+        ],
+        [
+          "beleza_pura"
+        ],
+        [
+          "optimism"
+        ],
+        [
+          "high_roller",
+          "redemption"
+        ]
+      ],
+      "beaconBias": {
+        "purple": 25,
+        "blue": 15
+      },
+      "trialPreference": [
+        "hubris",
+        "adrenaline_junkie"
+      ],
+      "forbiddenTrials": [
+        "lights_out"
+      ],
+      "forbiddenTrialsWhy": "Expert: \"never ever take things like lights out — or anything that has a chance to give u curses during opal\".",
+      "notes": "Removes almost all bloat and gives a good amount of pulls."
+    },
+    {
+      "id": "mix_match",
+      "name": "Combo 6 — Mix-match (Ostinato/Porph/Route Indigo)",
+      "popularity": 3,
+      "core": [
+        "ostinato",
+        "porphyrophobia"
+      ],
+      "followups": [
+        [
+          "equilibrium"
+        ],
+        [
+          "route_indigo"
+        ],
+        [
+          "high_roller",
+          "redemption"
+        ]
+      ],
+      "beaconBias": {
+        "purple": 30,
+        "blue": 25
+      },
+      "notes": "Expert: \"a weird mix match combo of ostinatio porph equi route indigo\". Route Indigo boosts purple AND blue by 1 tier but obscures which is which."
+    },
+    {
+      "id": "side_pull",
+      "name": "Side combo — Thrill Seeker + Knife Edge",
+      "popularity": 4,
+      "core": [
+        "thrill_seeker",
+        "knife_edge"
+      ],
+      "coreNote": "Expert: \"its not good i mean but they both go together... they pair together to give a decent amount of pull\". PAIR ONLY — neither is worth a slot alone.",
+      "requiresBoth": true,
+      "followups": [
+        [
+          "porphyrophobia"
+        ],
+        [
+          "sacrificial_ritual"
+        ]
+      ],
+      "beaconBias": {
+        "red": 25
+      },
+      "notes": "Takeable as a SIDE combo when you already have something like Porph + Sac Ritual. See the guide Run Combos \"passive combo\" section."
     }
   ],
-  "beaconBiasNote": "beaconBias adds directly to a beacon's phase score (phase ranks are spaced by 10). Applied by evaluateOffer once an archetype is committed. Positive = prioritise, negative = downrank. These are opinions, tune freely."
+  "beaconBiasNote": "beaconBias adds directly to a beacon's phase score (phase ranks are spaced by 10). Applied by evaluateOffer once an archetype is committed. Positive = prioritise, negative = downrank. These are opinions, tune freely.",
+  "deletedArchetypes": [
+    {
+      "id": "reroll_spam",
+      "why": "core Gourmand is avoid-tier"
+    },
+    {
+      "id": "speedrun",
+      "why": "core Chronokinesis+Stasis both rejected"
+    },
+    {
+      "id": "radiance",
+      "why": "Radiant Hunter is combo-3 POOL, not a core"
+    },
+    {
+      "id": "endgame",
+      "why": "merged into side_pull with Thrill Seeker"
+    }
+  ],
+  "communityNote": "These combos will migrate into strategies/*.json so the community can add and edit their own. Kept here only until the playbook migration."
 }

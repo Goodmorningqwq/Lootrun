@@ -115,10 +115,15 @@ describe('use caps', () => {
     expect(() => takeBeacon(s, { color: 'white' })).toThrow(IllegalMoveError);
   });
 
-  it('allows grey exactly 3 times', () => {
+  /**
+   * Grey allows 2, not 3: the challenge-4 mission is FORCED (no grey) and
+   * consumes one of the 3 mission slots, so only 2 greys are needed.
+   */
+  it('allows grey exactly 2 times', () => {
     let s = advance(createRun(), 4);
-    for (let i = 0; i < 3; i++) s = takeBeacon(s, { color: 'grey' });
+    for (let i = 0; i < 2; i++) s = takeBeacon(s, { color: 'grey' });
     expect(isExhausted(s, 'grey')).toBe(true);
+    expect(() => takeBeacon(s, { color: 'grey' })).toThrow(IllegalMoveError);
   });
 
   it('does not cap blue before 30', () => {

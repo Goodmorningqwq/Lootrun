@@ -74,6 +74,16 @@ export interface Tactics {
   missionUrgency?: { bonus: number; rawGreyUrgentFromChallenge: number };
 }
 
+/** Per-verdict mission score adjustment. Editable per strategy. */
+export type VerdictScores = Partial<Record<Verdict, number>>;
+
+export interface SideComboRule {
+  pair: string[];
+  alonePenalty?: number;
+  togetherBonus?: number;
+  why?: string;
+}
+
 export interface Strategy {
   id: string;
   name?: string;
@@ -81,6 +91,8 @@ export interface Strategy {
   safety: SafetyRule[];
   phases: Phase[];
   tactics?: Tactics;
+  verdictScores?: VerdictScores;
+  sideComboRule?: SideComboRule;
 }
 
 /**
@@ -141,6 +153,10 @@ export function getStrategy(): Strategy {
   return strategy;
 }
 
+/** Expert classification — see data/missions.json `verdictTaxonomy`. */
+export type Verdict =
+  | 'core' | 'pool' | 'enabler' | 'side' | 'salvage' | 'bloat' | 'avoid' | 'deleted';
+
 interface MissionSpec {
   id: string;
   name: string;
@@ -151,6 +167,8 @@ interface MissionSpec {
   notes?: string;
   beaconBias?: Partial<Record<BeaconColor, number>>;
   beaconBiasWhy?: string;
+  verdict?: Verdict;
+  verdictWhy?: string;
 }
 
 interface TrialSpec {
@@ -532,6 +550,38 @@ export function evaluateMissionOffer(state: RunState, offered: string[]): Missio
     if (id === 'kings_court') {
       score -= 20;
       reasons.push('Costs a mission slot to gain a trial — charge it the slot');
+    }
+
+    // --- expert verdict -------------------------------------------------
+    // The decisive fix: nothing previously stopped the advisor recommending
+    // missions an expert says never to take.
+    const verdict = spec.verdict;
+    if (verdict) {
+      const adj = strategy.verdictScores?.[verdict];
+      if (adj) {
+        score += adj;
+        const label =
+          verdict === 'avoid' ? '⛔ Expert: never take this'
+          : verdict === 'deleted' ? '🗑️ Expert: ignore that this exists'
+          : verdict === 'bloat' ? 'Bloat — works but unnecessary'
+          : `verdict: ${verdict}`;
+        reasons.push(`${label}${spec.verdictWhy ? ` (${spec.verdictWhy})` : ''}`);
+      }
+    }
+
+    // --- side combo: viable only as a pair -------------------------------
+    const side = strategy.sideComboRule;
+    if (side?.pair.includes(id)) {
+      const partner = side.pair.find((p) => p !== id);
+      if (partner && heldSet.has(partner)) {
+        score += side.togetherBonus ?? 0;
+        reasons.push(`Pairs with ${MISSIONS[partner]?.name ?? partner} — the side combo works`);
+      } else {
+        score += side.alonePenalty ?? 0;
+        reasons.push(
+          `Only viable paired with ${MISSIONS[partner ?? '']?.name ?? partner} — weak alone`,
+        );
+      }
     }
 
     if (reasons.length === 0) reasons.push('No archetype fit or role gap — neutral');

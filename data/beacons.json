@@ -208,8 +208,8 @@
       "id": "grey",
       "name": "Grey Beacon",
       "effect": "Offers a Mission choice.",
-      "maxUses": 3,
-      "availability": "First mission at challenge 4; stops appearing around challenge 30.",
+      "maxUses": 2,
+      "availability": "First mission is forced at challenge 4 (no grey); 2 greys follow. Stops appearing around challenge 30.",
       "notes": "Only ~3 mission slots exist, which is precisely why the first pick effectively commits the archetype. +1 available via Monochromokopia.",
       "noRepeatAfterOffer": false,
       "tiers": {
@@ -220,7 +220,8 @@
           5,
           5
         ]
-      }
+      },
+      "maxUsesNote": "2, not 3. Confirmed by user 2026-07-25: the challenge-4 mission is FORCED and counts as one of your 3 mission slots, so only 2 further greys are needed. +1 available via Monochromokopia."
     },
     {
       "id": "red",
