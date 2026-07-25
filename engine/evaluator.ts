@@ -214,6 +214,64 @@ interface Archetype {
  * archetype must not steer beacon priority. Mission-pick advice leaves it false
  * (you plan toward an archetype from every mission you hold, activated or not).
  */
+/** One combo's contribution to a colour, with the combo named for the UI. */
+export interface BiasContribution {
+  value: number;
+  from: string;
+  completeness: number;
+}
+
+/**
+ * Compose beacon bias across EVERY matching combo, not just the best-fitting
+ * one — a run routinely straddles several (Ostinato + Porph matches three).
+ *
+ * Rule: strongest advocate + strongest objector, each scaled by how complete
+ * its combo is. NOT a sum: combos overlap (mix_match restates curse_stack and
+ * ostinato), so summing double-counts the same strategic intent and inflates a
+ * colour past the phase priority and safety layers. Taking the strongest
+ * advocate also keeps one attributable combo per colour, so the reason line
+ * stays honest instead of becoming an unexplainable total.
+ */
+export function composeBeaconBias(
+  state: RunState,
+  activatedOnly = true,
+): Partial<Record<BeaconColor, BiasContribution>> {
+  const held = new Set(
+    state.missions.filter((m) => !activatedOnly || m.fulfilled).map((m) => m.id),
+  );
+  const matches = ARCHETYPES.filter(
+    (a) => a.id !== 'universal' && (a.core ?? []).some((c) => held.has(c)),
+  ).map((a) => {
+    const core = a.core ?? [];
+    const hits = core.filter((c) => held.has(c)).length;
+    return { a, completeness: hits / Math.max(1, core.length) };
+  });
+
+  const out: Partial<Record<BeaconColor, BiasContribution>> = {};
+  for (const color of BEACON_COLORS) {
+    let pos: BiasContribution | null = null;
+    let neg: BiasContribution | null = null;
+    for (const m of matches) {
+      const raw = m.a.beaconBias?.[color];
+      if (!raw) continue;
+      const c: BiasContribution = {
+        value: raw * m.completeness,
+        from: m.a.name,
+        completeness: m.completeness,
+      };
+      if (c.value > 0 && (!pos || c.value > pos.value)) pos = c;
+      if (c.value < 0 && (!neg || c.value < neg.value)) neg = c;
+    }
+    const total = (pos?.value ?? 0) + (neg?.value ?? 0);
+    if (total === 0) continue;
+    // Attribute to whichever side dominates, so the reason names one combo.
+    const dominant =
+      Math.abs(pos?.value ?? 0) >= Math.abs(neg?.value ?? 0) ? (pos ?? neg) : (neg ?? pos);
+    out[color] = { value: total, from: dominant!.from, completeness: dominant!.completeness };
+  }
+  return out;
+}
+
 export function committedArchetype(state: RunState, activatedOnly = false): Archetype | null {
   const held = new Set(
     state.missions.filter((m) => !activatedOnly || m.fulfilled).map((m) => m.id),
@@ -628,7 +686,8 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
   // Only ACTIVATED missions steer beacon priority — an un-activated mission
   // has no effect yet (point 5 of the playtest feedback).
   const archetype = committedArchetype(state, true);
-  const bias = archetype?.beaconBias ?? {};
+  // Composed across ALL matching combos, not just the best-fitting one.
+  const bias = composeBeaconBias(state, true);
 
   /**
    * Every held mission and trial contributes its own beacon bias, and they SUM.
@@ -676,9 +735,9 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
     if (armingMission?.objective && byNeed[armingMission.objective]) {
       return byNeed[armingMission.objective] as BeaconColor;
     }
-    const entries = Object.entries(bias).filter(([, v]) => (v ?? 0) > 0);
+    const entries = Object.entries(bias).filter(([, v]) => (v?.value ?? 0) > 0);
     if (entries.length === 0) return undefined;
-    entries.sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0));
+    entries.sort((a, b) => (b[1]?.value ?? 0) - (a[1]?.value ?? 0));
     return entries[0]?.[0] as BeaconColor;
   })();
 
@@ -724,15 +783,22 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
       );
     }
 
-    // --- archetype beacon bias (activated missions only) --------------
-    const biasVal = bias[b.color];
-    if (biasVal) {
-      score += biasVal;
-      reasons.push(
-        `${archetype?.name}: ${biasVal > 0 ? '+' : ''}${biasVal} (run combo ${
-          biasVal > 0 ? 'wants' : 'avoids'
-        } ${b.color})`,
-      );
+    // --- combo beacon bias (activated missions only) -------------------
+    const contribution = bias[b.color];
+    if (contribution) {
+      const v = Math.round(contribution.value);
+      if (v !== 0) {
+        score += v;
+        const built =
+          contribution.completeness >= 1
+            ? 'fully built'
+            : `${Math.round(contribution.completeness * 100)}% built`;
+        reasons.push(
+          `${contribution.from} (${built}): ${v > 0 ? '+' : ''}${v} — run combo ${
+            v > 0 ? 'wants' : 'avoids'
+          } ${b.color}`,
+        );
+      }
     }
 
     // --- per-mission / per-trial bias, summed --------------------------

@@ -15,6 +15,7 @@ import {
   validateStrategy,
   setStrategy,
   DEFAULT_STRATEGY,
+  composeBeaconBias,
   parsePriorityEntry,
   priorityIndexFor,
 } from './evaluator';
@@ -266,7 +267,8 @@ describe('archetype-aware beacon priority (playtester feedback)', () => {
     // Under the purple combo, purple pulls decisively ahead.
     expect(pC.score - bC.score).toBeGreaterThan(gapNeutral);
     expect(curse.ranked[0]?.color).toBe('purple');
-    expect(pC.reasons.join(' ')).toMatch(/Purple: \+/i); // "Combo 3 — Purple: +40 …"
+    // Reason names the combo and how complete it is: "Combo 3 — Purple (fully built): +40 …"
+    expect(pC.reasons.join(' ')).toMatch(/Purple \((fully|\d+%) built\): \+/i);
   });
 
   it('prioritises blue on an Ostinato run', () => {
@@ -377,6 +379,50 @@ describe('boosted priority tokens (buffed:/aqua:)', () => {
   });
 });
 
+describe('combo bias composes across straddled combos', () => {
+  /**
+   * Regression for a real bug: committedArchetype picked ONE winner by core-hit
+   * count (ties broken by array order in the data file), so a run straddling
+   * several combos silently lost every bias but one.
+   */
+  it('applies the strongest advocate across all matching combos', () => {
+    // Ostinato + Porph matches three combos at once:
+    //   curse_stack 1/1 (purple +40) · ostinato 1/1 (blue +35) · mix_match 2/2 (purple +30, blue +25)
+    const s = runAt(15, { missions: slots('ostinato', 'porphyrophobia') });
+    const bias = composeBeaconBias(s, true);
+    // Strongest advocate wins per colour — NOT the sum (+70), which would
+    // double-count mix_match restating what the other two already say.
+    expect(bias.purple?.value).toBe(40);
+    expect(bias.blue?.value).toBe(35);
+    expect(bias.purple?.from).toMatch(/Purple/);
+  });
+
+  it('scales bias by how complete the combo is', () => {
+    const third = composeBeaconBias(runAt(15, { missions: slots('hoarder') }), true);
+    const twoThirds = composeBeaconBias(
+      runAt(15, { missions: slots('hoarder', 'interest_scheme') }),
+      true,
+    );
+    // flying_chest yellow +30 at 1/3 then 2/3 built.
+    expect(third.yellow!.value).toBeCloseTo(10);
+    expect(twoThirds.yellow!.value).toBeCloseTo(20);
+    expect(third.yellow!.completeness).toBeCloseTo(1 / 3);
+  });
+
+  it('keeps advocate and objector when combos disagree', () => {
+    // flying_chest wants blue DOWN (-10); ostinato wants blue UP (+35).
+    const bias = composeBeaconBias(runAt(15, { missions: slots('hoarder', 'ostinato') }), true);
+    // +35 advocate plus -3.3 objector — the conflict survives, not cancelled.
+    expect(bias.blue!.value).toBeGreaterThan(30);
+    expect(bias.blue!.value).toBeLessThan(35);
+  });
+
+  it('ignores combos whose missions are not yet activated', () => {
+    const pending = runAt(15, { missions: [{ id: 'ostinato', fulfilled: false }] });
+    expect(composeBeaconBias(pending, true).blue).toBeUndefined();
+  });
+});
+
 describe('per-mission / per-trial bias composes across combinations', () => {
   /** Score of one colour in an offer, for comparing setups. */
   const scoreOf = (state: RunState, color: 'red' | 'blue' | 'green' | 'yellow' | 'purple') =>
@@ -400,9 +446,20 @@ describe('per-mission / per-trial bias composes across combinations', () => {
 
   it('opposing effects cancel rather than one silently winning', () => {
     // Thrill Seeker wants red; Knife Edge is ruined by added challenges.
+    // Adding Knife Edge must LOWER red overall, even though it simultaneously
+    // completes the side combo (whose own red bias rises 50% -> 100% built).
+    // Asserting the direction rather than an exact sum, since two independent
+    // contributions move at once.
     const thrill = scoreOf(runAt(15, { missions: slots('thrill_seeker') }), 'red');
     const both = scoreOf(runAt(15, { missions: slots('thrill_seeker', 'knife_edge') }), 'red');
-    expect(both).toBe(thrill - 30); // Knife Edge's -30 applies too
+    expect(both).toBeLessThan(thrill);
+
+    const a = evaluateOffer(runAt(15, { missions: slots('thrill_seeker', 'knife_edge') }), [
+      { color: 'red' },
+    ]);
+    const why = a.ranked[0]!.reasons.join(' | ');
+    expect(why).toMatch(/Thrill Seeker: \+30/); // advocate still counted
+    expect(why).toMatch(/Knife Edge: -30/); // objector not silently dropped
   });
 
   it('a trial can veto a beacon the phase likes — Ultimate Sacrifice kills blue', () => {
