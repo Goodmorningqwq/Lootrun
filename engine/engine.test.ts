@@ -206,6 +206,58 @@ describe('tier resolution', () => {
   });
 });
 
+describe('Beleza Pura — an OFFERED aqua boosts the whole offer', () => {
+  // Expert: "if an aqua is offered all the beacons offered are boosted by it...
+  // the rest would act like u had taken an aqua before them."
+  const withBeleza = (o: Partial<RunState> = {}) =>
+    createRun({ missions: [{ id: 'beleza_pura', fulfilled: true }], ...o });
+
+  it('boosts other beacons in an offer containing aqua', () => {
+    const s = recordOffer(withBeleza(), [{ color: 'aqua' }, { color: 'white' }]);
+    expect(resolveTier(s, { color: 'white' })).toBe(1);
+  });
+
+  it('does not boost the offered aqua itself — it is the source', () => {
+    const s = recordOffer(withBeleza(), [{ color: 'aqua' }, { color: 'white' }]);
+    expect(resolveTier(s, { color: 'aqua' })).toBe(0);
+  });
+
+  it('does nothing when no aqua is offered', () => {
+    const s = recordOffer(withBeleza(), [{ color: 'white' }, { color: 'red' }]);
+    expect(resolveTier(s, { color: 'white' })).toBe(0);
+  });
+
+  it('does nothing while the mission is not yet activated', () => {
+    const pending = createRun({ missions: [{ id: 'beleza_pura', fulfilled: false }] });
+    const s = recordOffer(pending, [{ color: 'aqua' }, { color: 'white' }]);
+    expect(resolveTier(s, { color: 'white' })).toBe(0);
+  });
+
+  it('a vibrant offered aqua boosts harder', () => {
+    const s = recordOffer(withBeleza(), [{ color: 'aqua', vibrant: true }, { color: 'white' }]);
+    expect(resolveTier(s, { color: 'white' })).toBe(2);
+  });
+
+  it('stacks with a banked aqua, still capped at tier 3', () => {
+    const banked = takeBeacon(withBeleza(), { color: 'aqua', vibrant: true }); // banks 2
+    const s = recordOffer(banked, [{ color: 'aqua' }, { color: 'white' }]);
+    expect(resolveTier(s, { color: 'white' })).toBe(3);
+  });
+
+  it('makes a taken white land at the boosted challenge count', () => {
+    const s = recordOffer(withBeleza(), [{ color: 'aqua' }, { color: 'white' }]);
+    // tier 1 white = +20 challenges (tier 0 would be +15)
+    expect(takeBeacon(s, { color: 'white' }).challengesRemaining).toBe(12 + 20);
+  });
+
+  it('does not leak into the next challenge', () => {
+    let s = recordOffer(withBeleza(), [{ color: 'aqua' }, { color: 'red' }]);
+    expect(s.offerAquaBoost).toBeGreaterThan(0);
+    s = completeChallenge(s);
+    expect(s.offerAquaBoost).toBe(0);
+  });
+});
+
 describe('purple and dark grey grants', () => {
   /** No daily bonus, so pulls isolate the beacon's own grant. */
   const bare = () => createRun({ dailyBonus: false });

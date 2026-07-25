@@ -119,6 +119,12 @@ export interface RunState {
 
   /** Tier boost banked from an aqua, applied to the next beacon taken. */
   pendingAqua: number;
+  /**
+   * Beleza Pura: an aqua merely *offered* boosts every beacon offered
+   * alongside it, "as if you had taken that aqua before them". Derived from
+   * the recorded offer, so it lasts for this challenge's decision only.
+   */
+  offerAquaBoost: number;
   /** Challenges for which rainbow guarantees vibrant. */
   rainbowChallengesLeft: number;
 

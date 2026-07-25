@@ -52,6 +52,7 @@ export function createRun(overrides: Partial<RunState> = {}): RunState {
     missions: [],
     trials: [],
     pendingAqua: 0,
+    offerAquaBoost: 0,
     rainbowChallengesLeft: 0,
     beaconUses: {},
     excludedNext: [],
@@ -163,17 +164,52 @@ export function legalColors(state: RunState): BeaconColor[] {
  * Seeing a beacon is what removes it from next challenge's pool, which is why
  * an offer can be used deliberately to thin the pool.
  */
+/**
+ * Beleza Pura (activated): an aqua that is merely OFFERED boosts every other
+ * beacon in the same offer, exactly as if that aqua had been taken first.
+ *
+ * Derived from the offer rather than stored, so any caller holding an offer can
+ * compute it — the UI previews tiers before the offer is ever committed.
+ */
+export function offerAquaBoostFor(state: RunState, offer: OfferedBeacon[]): number {
+  const belezaActive = state.missions.some((m) => m.id === 'beleza_pura' && m.fulfilled);
+  const offeredAqua = offer.find((o) => o.color === 'aqua');
+  if (!belezaActive || !offeredAqua) return 0;
+  // The aqua's own tier, computed WITHOUT this boost to avoid circularity.
+  const aquaTier = Math.min(
+    MAX_TIER,
+    (offeredAqua.vibrant || state.rainbowChallengesLeft > 0 ? 1 : 0) + state.pendingAqua,
+  );
+  return Math.min(MAX_TIER, aquaTier + 1);
+}
+
+/** State with this offer's Beleza Pura boost applied, for tier resolution. */
+export const withOfferBoost = (state: RunState, offer: OfferedBeacon[]): RunState => {
+  const b = offerAquaBoostFor(state, offer);
+  return b === state.offerAquaBoost ? state : { ...state, offerAquaBoost: b };
+};
+
 export function recordOffer(state: RunState, offer: OfferedBeacon[]): RunState {
   const excluded = offer
     .map((o) => o.color)
     .filter((c) => BEACONS[c].noRepeatAfterOffer === true);
-  return { ...state, excludedNext: [...new Set(excluded)] };
+  return {
+    ...state,
+    excludedNext: [...new Set(excluded)],
+    offerAquaBoost: offerAquaBoostFor(state, offer),
+  };
 }
 
-/** Effective tier: base 0, +1 if vibrant, + any banked aqua, capped at 3. */
+/**
+ * Effective tier: base 0, +1 if vibrant, + any banked aqua, + Beleza Pura's
+ * offered-aqua boost, capped at 3.
+ *
+ * The offered aqua does NOT boost itself — it is the source of the boost.
+ */
 export function resolveTier(state: RunState, beacon: OfferedBeacon): Tier {
   const vibrant = beacon.vibrant || state.rainbowChallengesLeft > 0;
-  const raw = (vibrant ? 1 : 0) + state.pendingAqua;
+  const beleza = beacon.color === 'aqua' ? 0 : (state.offerAquaBoost ?? 0);
+  const raw = (vibrant ? 1 : 0) + state.pendingAqua + beleza;
   return Math.min(raw, MAX_TIER) as Tier;
 }
 
@@ -300,6 +336,8 @@ export function completeChallenge(state: RunState): RunState {
     ...timed,
     challengesCompleted: state.challengesCompleted + 1,
     challengesRemaining: state.challengesRemaining - 1,
+    // Belongs to the offer just resolved — must not leak into the next one.
+    offerAquaBoost: 0,
     // Each orange ticks and expires independently. A duration-D orange must
     // boost exactly D offers, and each offer sits AFTER a completion — so a
     // stack stays active at challengesLeft 0 (its final boosted offer) and is

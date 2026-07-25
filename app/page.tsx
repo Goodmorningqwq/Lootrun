@@ -17,6 +17,7 @@ import {
   isUnlocked,
   pendingMission,
   resolveTier,
+  withOfferBoost,
 } from '../engine/engine';
 import { activePhases, evaluateMissionOffer, evaluateOffer } from '../engine/evaluator';
 import {
@@ -686,7 +687,9 @@ export default function Tracker() {
           <div className="mt-3 flex flex-wrap gap-2">
             {offer.map((o, i) => {
               const canVibrant = vibrancyChanceFor(run.rank) > 0;
-              const tier = resolveTier(run, o);
+              // Boost-aware: with Beleza Pura, an aqua in this very offer
+              // already boosts everything alongside it.
+              const tier = resolveTier(withOfferBoost(run, offer), o);
               const preview = tierPreview(o.color, tier);
               return (
                 <div

@@ -16,7 +16,7 @@ import trialsJson from '../data/trials.json';
 import archetypesJson from '../data/archetypes.json';
 import objectivesJson from '../data/mission_objectives.json';
 import { BEACON_COLORS, type BeaconColor, type OfferedBeacon, type RunState } from './types';
-import { beaconChoices, pendingMission, resolveTier } from './engine';
+import { beaconChoices, pendingMission, resolveTier, withOfferBoost } from './engine';
 import { BEACONS, RUN_CONSTANTS } from './data';
 
 /* ------------------------------------------------------------------ */
@@ -661,6 +661,11 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
 
   const tactics = strategy.tactics ?? {};
 
+  // Beleza Pura's boost is derived from THIS offer, so evaluateOffer computes
+  // it rather than depending on recordOffer having run first — otherwise the
+  // live preview and the committed take would disagree.
+  const tierState = withOfferBoost(state, offer);
+
   /**
    * The beacon this run's combo actually converts into value — what an aqua
    * should be spent on. Taken from the un-activated mission's objective if
@@ -693,7 +698,7 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
     const reasons: string[] = [];
     let score: number;
 
-    const beaconTier = resolveTier(state, b);
+    const beaconTier = resolveTier(tierState, b);
     const idx = priorityIndexFor(priority, b.color, beaconTier);
     if (idx >= 0) {
       score = (priority.length - idx) * 10;
@@ -746,7 +751,7 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
     // pays. Promoting a raw grey early is the behaviour playtesting rejected.
     if (b.color === 'grey' && greyUrgent) {
       const mu = tactics.missionUrgency;
-      const greyTier = resolveTier(state, b);
+      const greyTier = resolveTier(tierState, b);
       const windowClosing =
         !mu || state.challengesCompleted >= mu.rawGreyUrgentFromChallenge;
       if (greyTier > 0 || windowClosing) {
@@ -766,7 +771,7 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
     // --- tactics: high-value beacons want to be boosted ---------------
     const bo = tactics.boostedOnly;
     if (bo?.beacons.includes(b.color)) {
-      const tier = resolveTier(state, b);
+      const tier = resolveTier(tierState, b);
       const firstRainbowRaw =
         bo.firstRainbowRaw && b.color === 'rainbow' && (state.beaconUses.rainbow ?? 0) === 0;
       if (tier === 0 && !firstRainbowRaw) {

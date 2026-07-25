@@ -361,13 +361,13 @@
         "beaconOffers.aqua"
       ],
       "archetypes": [],
-      "notes": "Removes the aqua-then-payoff sequencing cost entirely. Very strong; changes aqua priority from 'take and hold' to 'ignore, take the payoff directly'.",
+      "notes": "Removes the aqua-then-payoff sequencing cost: you need the aqua OFFERED, not taken. Changes aqua from take-and-hold to ignore-and-take-the-payoff-directly.",
       "beaconBias": {
         "aqua": -25
       },
       "beaconBiasWhy": "applies 1 tier of buff from a merely OFFERED aqua, so spending a pick on aqua is wasted",
       "verdict": "enabler",
-      "mechanic": "Expert: \"makes it so u dont need to take aqua in most cases as it already applied 1 tier of buff.\""
+      "mechanic": "CONFIRMED (Mujtaba 2026-07-25): if an aqua is offered, all beacons offered are boosted by it — 4 beacons offered, if there is an aqua the rest act as if you had taken an aqua before them. Modelled as RunState.offerAquaBoost, set by recordOffer(); the offered aqua does not boost itself."
     },
     {
       "id": "backup_beat",
