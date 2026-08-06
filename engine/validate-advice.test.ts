@@ -6,13 +6,18 @@
  * that can — it plays the advisor's top pick and its bottom pick out to the end
  * of the run many times and compares the outcomes.
  *
- * KNOWN CEILING — read before trusting the number. The simulator's E[pulls]
- * ignores boons and mission effects (see simulator.ts), so it is blind to most
- * of what the advisor actually optimises for: orange (beacon choices), grey
- * (missions) and aqua (boosts) convert to pulls only indirectly. This harness
- * therefore UNDERSTATES the advisor by construction. A win rate meaningfully
- * above 50% is real signal; the pull delta is NOT a meaningful effect size
- * until the simulator models boons and missions.
+ * Boons and mission economies ARE now modelled (engine/missionEffects.ts), so
+ * E[pulls] responds to the full value chain rather than purple alone.
+ *
+ * WHAT THE NUMBER MEANS. Win rate above 50% means the ranking carries signal.
+ * It is NOT a claim of optimality: the advisor also optimises for survival,
+ * reachability and flexibility, which pure pull-maximisation does not reward.
+ *
+ * HISTORY WORTH KEEPING. Before mission effects were modelled this reported an
+ * 80% win rate — but E[pulls] was then driven almost entirely by purple and by
+ * challenge count, both of which the advisor's priorities correlate with, so the
+ * metric was flattering itself. With the real economy in place it reads ~63%
+ * with double the effect size. The lower number is the more honest one.
  *
  * Excluded from the default vitest run (see vitest.config.ts) — it takes ~20s.
  */
@@ -94,7 +99,7 @@ describe('advice quality (opt-in — npm run validate)', () => {
     console.log(`  tied:       ${r.tied}`);
     console.log(`  win rate:   ${(r.winRate * 100).toFixed(0)}%   (50% = no signal)`);
     console.log(`  mean pulls: ${r.meanTop.toFixed(1)} vs ${r.meanBottom.toFixed(1)}`);
-    console.log('NOTE: E[pulls] is blind to boons and missions — this understates the advisor.');
+    console.log('NOTE: signal, not optimality — the advisor also weighs survival and reachability.');
 
     expect(r.n).toBeGreaterThan(20);
     expect(r.winRate).toBeGreaterThan(0.5);

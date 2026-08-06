@@ -836,12 +836,10 @@ export default function Tracker() {
           {forecast && (
             <p className="mt-2 text-[11px] text-zinc-600">
               Simulated by playing the rest of the run out {forecast.actions[0]?.runs} times per
-              option. Compare options against each other — absolutes inherit the offer model,
-              which is estimated rather than measured.{' '}
-              <b className="text-amber-600">
-                E[pulls] currently ignores boons and mission effects
-              </b>
-              , so trust P(runnable) and E[challenges] first.
+              option, with boons and mission economies modelled. Compare options{' '}
+              <b>against each other</b> — absolute numbers inherit the offer model and the
+              approximate economy (items per chest, radiant mobs per challenge), so the{' '}
+              <b className="text-amber-600">ordering is meaningful, the totals are not</b>.
             </p>
           )}
         </section>

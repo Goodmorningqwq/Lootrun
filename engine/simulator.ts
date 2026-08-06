@@ -9,24 +9,22 @@
  * Pure and dependency-free so it runs identically in tests, on the main
  * thread, and inside a Web Worker.
  *
- * KNOWN LIMITATIONS — read before trusting a number:
+ * Boons and mission effects ARE modelled, via ./missionEffects — blue grants a
+ * boon, yellow spawns flying chests, Hoarder converts chests to boons, Ostinato
+ * and Opal convert boons to pulls, and so on. That economic layer is what makes
+ * E[pulls] respond to anything other than purple, and therefore what makes the
+ * ranking tunable at all.
  *
- * 1. Boons and time do not feed back into pulls. The engine only credits pulls
- *    from purple/darkGrey, so a Blue and a Green with the same downstream
- *    challenge count score IDENTICALLY. Any option whose value is in boons,
- *    potency or timer headroom is currently invisible to E[pulls]. This is the
- *    single biggest gap: it makes the simulator good at "will this run
- *    survive and how long" and weak at "which reward is bigger".
+ * REMAINING LIMITATIONS — read before trusting a number:
  *
- * 2. Mission effects are not simulated. Rollouts acquire missions (so
- *    P(runnable) is meaningful) but a held Hoarder or High Roller does not
- *    actually generate anything, so archetype payoff is unmodelled.
+ * 1. The economy is approximate by construction. Items per chest, radiant mobs
+ *    per challenge and Jester's Trick's random outcomes are constants; see
+ *    SIM_ECONOMY. Trust the ORDERING of options, not the absolute pull counts.
  *
- * 3. P(timeout) is inert at default settings: challenges grant +150s and cost
+ * 2. P(timeout) is inert at default settings: challenges grant +150s and cost
  *    `secondsPerChallenge` (default 120), so time only binds above ~150.
  *
- * Consequence: compare options against each other, and weight P(runnable) and
- * E[challenges] over E[pulls] until (1) and (2) are closed.
+ * 3. Trials are held but their effects are not simulated.
  */
 
 import type { OfferedBeacon, RunState } from './types';
@@ -39,6 +37,7 @@ import {
   takeMission,
   fulfilMission,
   pendingMission,
+  resolveTier,
   firstMissionDue,
 } from './engine';
 import {
@@ -47,6 +46,7 @@ import {
   isRunnable,
   MISSIONS,
 } from './evaluator';
+import { simBeaconTaken, simChallengeCompleted, simMissionAcquired } from './missionEffects';
 import {
   DEFAULT_OFFER_MODEL,
   makeRng,
@@ -114,6 +114,7 @@ export function rollout(
         // Assume the mission is fulfilled promptly; the strategic question of
         // *when* to fulfil is a human decision the rollout does not model.
         s = fulfilMission(s, pick.id);
+        s = simMissionAcquired(s, pick.id);
       }
     }
 
@@ -126,18 +127,25 @@ export function rollout(
     if (!best) break;
 
     const chosen: OfferedBeacon = { color: best.color, vibrant: best.vibrant };
+    const takenTier = resolveTier(s, chosen);
     try {
       s = takeBeacon(s, chosen);
     } catch {
       break; // engine rejected it — treat as run end rather than guessing
     }
+    // Economic effects the engine deliberately leaves out: chests, boons, and
+    // the pull multipliers missions place on them.
+    s = simBeaconTaken(s, chosen, takenTier);
 
     // A grey beacon hands out another mission.
     if (chosen.color === 'grey' && !pendingMission(s)) {
       const mOffer = sampleMissionOffer(s, MISSION_IDS, rng);
       const mAdvice = evaluateMissionOffer(s, mOffer);
       const pick = mAdvice.ranked[0];
-      if (pick) s = fulfilMission(takeMission(s, pick.id), pick.id);
+      if (pick) {
+        s = fulfilMission(takeMission(s, pick.id), pick.id);
+        s = simMissionAcquired(s, pick.id);
+      }
     }
 
     s = startChallenge(s);
@@ -153,6 +161,8 @@ export function rollout(
     }
 
     s = completeChallenge(s);
+    // Per-challenge mission income (Materialism chests, Knife Edge, etc.).
+    s = simChallengeCompleted(s, chosen.color === 'red');
     if (!runnable && isRunnable(s)) runnable = true;
   }
 

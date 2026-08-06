@@ -136,6 +136,12 @@ export interface RunState {
   excludedNext: BeaconColor[];
 
   chestsOpened: number;
+  /**
+   * Flying chests specifically. The in-game Inspect menu only reports a single
+   * combined `Chests Opened`, so for the tracker this is engine-derived (yellow
+   * beacons + Materialism); the simulator maintains it directly.
+   */
+  flyingChests: number;
   mobsKilled: number;
   deaths: number;
 

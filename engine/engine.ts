@@ -57,6 +57,7 @@ export function createRun(overrides: Partial<RunState> = {}): RunState {
     beaconUses: {},
     excludedNext: [],
     chestsOpened: 0,
+    flyingChests: 0,
     mobsKilled: 0,
     deaths: 0,
     flags: { hubris: false, boonsDisabled: false, cannotGainTime: false },
