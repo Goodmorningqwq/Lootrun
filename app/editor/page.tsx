@@ -9,6 +9,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTracker } from '../store';
+import TreeView from './TreeView';
 import { BEACON_COLORS } from '../../engine/types';
 
 /** Canonical beacon list — from the engine, never duplicated here. */
@@ -226,6 +227,7 @@ export default function Editor() {
   const [json, setJson] = useState('');
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [allOpen, setAllOpen] = useState(false);
+  const [panel, setPanel] = useState<'flow' | 'tree'>('flow');
 
   useEffect(() => setHydrated(true), []);
   useEffect(() => {
@@ -336,13 +338,34 @@ export default function Editor() {
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Visualisation */}
         <section className="space-y-3">
+          {/* Two axes of the same strategy: Flow is priority over TIME,
+              Tree is priority over MISSIONS HELD. */}
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Flow</h2>
-            <div className="flex gap-2 text-[11px]">
-              <button onClick={() => setAllOpen(true)} className="text-zinc-500 hover:text-zinc-300">expand all</button>
-              <button onClick={() => setAllOpen(false)} className="text-zinc-500 hover:text-zinc-300">collapse all</button>
+            <div className="flex gap-1">
+              {(['flow', 'tree'] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPanel(p)}
+                  className={`rounded px-2 py-1 text-sm font-semibold capitalize ${
+                    panel === p ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
             </div>
+            {panel === 'flow' && (
+              <div className="flex gap-2 text-[11px]">
+                <button onClick={() => setAllOpen(true)} className="text-zinc-500 hover:text-zinc-300">expand all</button>
+                <button onClick={() => setAllOpen(false)} className="text-zinc-500 hover:text-zinc-300">collapse all</button>
+              </div>
+            )}
           </div>
+
+          {panel === 'tree' && <TreeView />}
+
+          {panel === 'flow' && (
+          <>
           <p className="text-xs text-zinc-500">
             Each phase triggers on its condition (last matching phase wins). Its beacon priority is
             high→low. A <span className="text-cyan-300">✦ boosted</span> entry (e.g.{' '}
@@ -521,6 +544,8 @@ export default function Editor() {
                   ))}
               </div>
             </>
+          )}
+          </>
           )}
         </section>
 
