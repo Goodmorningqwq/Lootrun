@@ -126,10 +126,14 @@
       },
       "beaconPriority": [
         "orange",
+        "darkGrey",
+        "purple",
+        "blue",
+        "yellow",
+        "green",
         "aqua",
         "pink",
-        "red",
-        "blue"
+        "red"
       ],
       "tiedRanks": [
         [
@@ -146,7 +150,8 @@
       "notes": [
         "Orange is the safest top pick post-2.2.1: it adds choices and is untouched by the boosting rework.",
         "DISPUTED: aqua's rank here assumes multiplicative stacking. If additive is broad, aqua likely drops below pink and red."
-      ]
+      ],
+      "priorityWhy": "Payoff beacons were absent from this list, so purple, yellow, green and darkGrey scored the unlisted-fallback 5 regardless of what they do. Aqua also sits below them now: it produces nothing itself, and priced against purple’s tier table it is break-even at base tier and strictly negative under a rainbow. Orange stays first — an extra beacon choice compounds over the whole run. The payoff beacons (darkGrey, purple, blue, yellow) sit adjacent on purpose. Which of them is best depends on your combo — blue for Ostinato, purple for Porphyrophobia, yellow for the chest engine — and combo bias tops out at +30, so spreading them further apart would let phase position override the plan the run is actually executing."
     },
     {
       "id": "mission_gate",
@@ -190,12 +195,16 @@
       "beaconPriority": [
         "buffed:white",
         "buffed:red",
-        "aqua",
         "orange",
+        "darkGrey",
+        "purple",
+        "blue",
+        "yellow",
         "white",
         "red",
-        "pink",
-        "blue"
+        "green",
+        "aqua",
+        "pink"
       ],
       "intent": "Convert the 12 starting challenges into a runway long enough for an archetype to pay off.",
       "targets": [
@@ -229,7 +238,8 @@
       "maintain": [
         "Refresh orange whenever offered",
         "Keep >= 5 beacon choices"
-      ]
+      ],
+      "priorityWhy": "Payoff beacons were absent from this list, so purple, yellow, green and darkGrey scored the unlisted-fallback 5 regardless of what they do. Aqua also sits below them now: it produces nothing itself, and priced against purple’s tier table it is break-even at base tier and strictly negative under a rainbow. The extension beacons (white, red) keep the top slots — that is this phase’s job. The payoff beacons (darkGrey, purple, blue, yellow) sit adjacent on purpose. Which of them is best depends on your combo — blue for Ostinato, purple for Porphyrophobia, yellow for the chest engine — and combo bias tops out at +30, so spreading them further apart would let phase position override the plan the run is actually executing."
     },
     {
       "id": "rainbow_window",
@@ -242,19 +252,19 @@
         "buffed:rainbow",
         "rainbow",
         "orange",
+        "grey",
         "darkGrey",
         "purple",
+        "blue",
         "yellow",
         "buffed:white",
-        "blue",
         "green",
         "aqua",
-        "grey",
         "pink",
         "white",
         "red"
       ],
-      "priorityWhy": "Purple, yellow, green and darkGrey were absent from this list, so the game's primary pull sources scored the unlisted-fallback 5 while aqua scored 80 — for most of the run. Aqua now sits below the payoffs: it produces nothing itself, and pricing it exactly against purple's tier table (which is already denominated in pulls) shows aqua-then-purple equals purple-twice at base tier, and strictly LOSES under an active rainbow, where everything is vibrant and the tier cap eats the boost. Taking the payoff directly is never worse and does not gamble on the next offer.",
+      "priorityWhy": "Purple, yellow, green and darkGrey were absent from this list, so the game's primary pull sources scored the unlisted-fallback 5 while aqua scored 80 — for most of the run. Aqua now sits below the payoffs: it produces nothing itself, and pricing it exactly against purple's tier table (which is already denominated in pulls) shows aqua-then-purple equals purple-twice at base tier, and strictly LOSES under an active rainbow, where everything is vibrant and the tier cap eats the boost. Taking the payoff directly is never worse and does not gamble on the next offer. The payoff beacons (darkGrey, purple, blue, yellow) sit adjacent on purpose. Which of them is best depends on your combo — blue for Ostinato, purple for Porphyrophobia, yellow for the chest engine — and combo bias tops out at +30, so spreading them further apart would let phase position override the plan the run is actually executing.",
       "hardRule": {
         "rule": "Take rainbow on sight. Never skip it.",
         "why": "Rainbow uses a ramping hazard rate after challenge 10 — the chance climbs until it appears, then resets. Skipping forfeits an event you cannot re-roll into cheaply."
@@ -281,7 +291,8 @@
         "orange"
       ],
       "intent": "Hold an aqua into challenge 20 — 'aqua boosted crimson beacons are a near must'.",
-      "disputed": true
+      "disputed": true,
+      "priorityWhy": "DELIBERATELY NOT CHANGED. Aqua ranks first here and that is correct: at challenge 19 you are banking a boost for a crimson or rainbow at 20, which is a planned target rather than a gamble on the next offer. This is the one phase where aqua’s setup role genuinely pays."
     },
     {
       "id": "trial_window",
@@ -295,9 +306,14 @@
         "buffed:crimson",
         "rainbow",
         "crimson",
-        "aqua",
         "orange",
         "grey",
+        "darkGrey",
+        "purple",
+        "blue",
+        "yellow",
+        "green",
+        "aqua",
         "pink"
       ],
       "crimsonPolicy": {
@@ -326,7 +342,8 @@
         "firstTrialRule": "Ultimate Sacrifice is the recommended FIRST trial while mob scaling is still low.",
         "secondTrialRule": "Gambling Beast should almost always be the SECOND trial — sustain it by stacking vibrant aqua/green. It grants no reroll if the timer cannot absorb the cost.",
         "note": "Archetype `trialPreference` refines this ordering but must not promote anything in `neverTake`."
-      }
+      },
+      "priorityWhy": "Payoff beacons were absent from this list, so purple, yellow, green and darkGrey scored the unlisted-fallback 5 regardless of what they do. Aqua also sits below them now: it produces nothing itself, and priced against purple’s tier table it is break-even at base tier and strictly negative under a rainbow. Rainbow and crimson still lead — the trial is the point of this window. The payoff beacons (darkGrey, purple, blue, yellow) sit adjacent on purpose. Which of them is best depends on your combo — blue for Ostinato, purple for Porphyrophobia, yellow for the chest engine — and combo bias tops out at +30, so spreading them further apart would let phase position override the plan the run is actually executing."
     },
     {
       "id": "mission_completion",
@@ -370,15 +387,17 @@
       "beaconPriority": [
         "buffed:rainbow",
         "buffed:white",
-        "aqua",
         "rainbow",
-        "white",
         "orange",
+        "darkGrey",
         "buffed:purple",
         "purple",
+        "blue",
         "yellow",
-        "red",
-        "green"
+        "white",
+        "green",
+        "aqua",
+        "red"
       ],
       "manage": [
         "Balance red (challenges) against green (time)",
@@ -391,7 +410,8 @@
         ],
         "payoff": "+30 challenges",
         "note": "Re-usable to push to 100."
-      }
+      },
+      "priorityWhy": "darkGrey and blue were unlisted here despite this being the phase that cashes a working combo. Aqua demoted for the same reason as elsewhere. The payoff beacons (darkGrey, purple, blue, yellow) sit adjacent on purpose. Which of them is best depends on your combo — blue for Ostinato, purple for Porphyrophobia, yellow for the chest engine — and combo bias tops out at +30, so spreading them further apart would let phase position override the plan the run is actually executing."
     },
     {
       "id": "salvage",
@@ -403,7 +423,8 @@
         "darkGrey",
         "crimson",
         "rainbow",
-        "orange"
+        "orange",
+        "green"
       ],
       "plan": [
         "FIRST: try the comboless pull line — Porphyrophobia + Route Indigo yields up to 300+ pulls from an otherwise dead run. Non-terminal, so attempt before any cash-out.",
@@ -413,7 +434,8 @@
         "Alternative cash-out: Treasury Bill for +75% of current pulls — better when the pull bank is already large."
       ],
       "ordering": "Non-terminal salvage (Porphyrophobia + Route Indigo, curse stacking) MUST be exhausted before terminal cash-outs (Gambling Beast). A cash-out forecloses the rest of the run; the pull line does not.",
-      "why": "Gambling Beast is only correct here. As a normal pick it is run-ending; as a deliberate cash-out it is the best salvage available."
+      "why": "Gambling Beast is only correct here. As a normal pick it is run-ending; as a deliberate cash-out it is the best salvage available.",
+      "priorityWhy": "Green added — time is useful with or without a combo. Yellow and blue are deliberately still absent: with no combo held, chests and boons have nothing to feed."
     },
     {
       "id": "endgame",
@@ -427,7 +449,8 @@
         "purple",
         "darkGrey",
         "yellow",
-        "white"
+        "white",
+        "green"
       ],
       "activates": [
         "knife_edge"
@@ -436,7 +459,8 @@
         "Knife Edge pays 7 minus challengesRemaining — worthless earlier, strong here.",
         "Red priority rises: challenges, not time, are now the binding constraint.",
         "On the final challenge suppress everything in safety.last-challenge-suppression."
-      ]
+      ],
+      "priorityWhy": "Green added so a time-limited finish can still buy challenges. Otherwise unchanged — this phase was already payoff-focused."
     }
   ],
   "combos": [

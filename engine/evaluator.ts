@@ -560,6 +560,41 @@ function requiredRoles(): string[] {
  * repeatedly for one strategic intent.
  */
 /**
+ * Score for sitting at position `idx` of a phase's beacon priority list.
+ *
+ * FIXED RUNGS, DEPENDENT ONLY ON POSITION. This used to be
+ * `(priority.length - idx) * 10`, which made the top slot worth 10x the list
+ * LENGTH — so a 14-entry phase handed out 140 where a 6-entry phase handed out
+ * 60, for the same "this is my first choice".
+ *
+ * That silently rescaled every fixed number elsewhere in the system against
+ * the phase layer: safety suppressions, the trial vetoes, and the tactic
+ * bonuses (missionUrgency 35, orangeRefresh 40, aquaLoop 45, unboostedPenalty
+ * -35) are all absolute. Lengthening one list therefore weakened all of them,
+ * and it broke two real rules in one sitting — the Ultimate Sacrifice blue
+ * veto and grey mission-window urgency — both of which had been correct for
+ * months.
+ *
+ * This matters most for the thing the editor exists to enable: a community
+ * author adding one beacon to a phase must not quietly disarm the safety
+ * layer. With fixed rungs, appending changes nothing above it, exactly as with
+ * the combo wants/avoids ladder.
+ *
+ * Floors at 10 rather than decaying to zero, so a listed beacon always
+ * outranks an unlisted one (which scores 5).
+ */
+export function phasePositionScore(idx: number): number {
+  // Step and top chosen to reproduce rainbow_window's OLD scale exactly (it
+  // had 14 entries and was by far the most-used phase), so the tactic and
+  // safety numbers keep the balance they were tuned against. Every other phase
+  // now shares that scale instead of inventing its own from its length.
+  return Math.max(10, PHASE_TOP_SCORE - idx * 10);
+}
+
+/** Score of a phase's first choice, whatever the list length. */
+export const PHASE_TOP_SCORE = 140;
+
+/**
  * Preference order for breaking score ties. Lower is better. Missions the
  * expert rejected must never win a tie against one they did not.
  */
@@ -875,7 +910,7 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
     const beaconTier = resolveTier(tierState, b);
     const idx = priorityIndexFor(priority, b.color, beaconTier);
     if (idx >= 0) {
-      score = (priority.length - idx) * 10;
+      score = phasePositionScore(idx);
       const entry = priority[idx];
       const boosted = entry !== undefined && parsePriorityEntry(entry).requiresBoost;
       reasons.push(
