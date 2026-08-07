@@ -27,11 +27,11 @@
  * the tree is by construction whatever the advisor will actually say.
  */
 
-import archetypesJson from '../data/archetypes.json';
 import { RUN_CONSTANTS } from './data';
 import { createRun, legalColors } from './engine';
 import {
   MISSIONS,
+  activeCombos,
   committedArchetype,
   evaluateMissionOffer,
   evaluateOffer,
@@ -40,16 +40,14 @@ import {
 } from './evaluator';
 import type { BeaconColor, RunState } from './types';
 
-interface Line {
-  id: string;
-  name: string;
-  core: string[];
-  cores?: string[][];
-}
-
-const LINES = (archetypesJson as unknown as { archetypes: Line[] }).archetypes.filter(
-  (l) => l.id !== 'universal',
-);
+/**
+ * The playbook, read live rather than from `data/archetypes.json`.
+ *
+ * Reading the JSON directly was a real bug: deleting a combo in the editor
+ * updated the `commits:` badge (which goes through committedArchetype) but not
+ * `also in:` (which did not), so the tree cited a combo that no longer existed.
+ */
+const lines = () => activeCombos().filter((l) => l.id !== 'universal');
 
 /**
  * Every mission that can actually be held. `MISSIONS` already drops entries
@@ -180,7 +178,7 @@ export function treeNode(missions: string[]): TreeNode {
     verdict: newest ? MISSIONS[newest]?.verdict : undefined,
     commits: committed ? { id: committed.id, name: committed.name } : null,
     alsoIn: newest
-      ? LINES.filter(
+      ? lines().filter(
           (l) =>
             l.id !== committed?.id &&
             (l.core.includes(newest) || (l.cores ?? []).some((c) => c.includes(newest))),

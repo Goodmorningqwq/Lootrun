@@ -18,17 +18,8 @@
 import { useMemo, useState } from 'react';
 import { childOf, rootBaseline, treeNode, type NextMission, type TreeNode } from '../../engine/playbookTree';
 import type { BeaconColor } from '../../engine/types';
+import { CHIP } from './beaconStyles';
 import { useTracker } from '../store';
-
-const CHIP: Record<string, string> = {
-  blue: 'bg-blue-600 text-white', purple: 'bg-purple-600 text-white',
-  yellow: 'bg-yellow-500 text-black', aqua: 'bg-cyan-500 text-black',
-  orange: 'bg-orange-500 text-black', green: 'bg-green-600 text-white',
-  darkGrey: 'bg-zinc-600 text-white', white: 'bg-zinc-100 text-black',
-  grey: 'bg-zinc-400 text-black', red: 'bg-red-600 text-white',
-  pink: 'bg-pink-500 text-black', crimson: 'bg-rose-900 text-white',
-  rainbow: 'bg-gradient-to-r from-red-500 via-yellow-400 to-blue-500 text-black',
-};
 
 /** Verdicts the expert says not to build around — dimmed, never hidden. */
 const WEAK = new Set(['avoid', 'bloat']);

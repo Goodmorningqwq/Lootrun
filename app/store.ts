@@ -304,8 +304,9 @@ export const useTracker = create<TrackerStore>()(
       // v2: RunState gained `rank`. Old persisted runs must be migrated, not
       // discarded — losing the run is exactly what persistence exists to stop.
       // v2: `rank`. v3: `dailyBonus`/`silverbull`. v4: missions became slots.
-      // v5: drop any persisted strategy — see below.
-      version: 5,
+      // v5: drop any persisted strategy — see below. v6: combos moved into
+      // the strategy and beacon bias became ordered wants/avoids.
+      version: 6,
       migrate: (persisted, version) => {
         const p = persisted as {
           history?: Array<RunState & { missions: Array<string | MissionSlot> }>;
@@ -320,6 +321,14 @@ export const useTracker = create<TrackerStore>()(
           // compared unequal and was mislabelled custom — freezing users on an
           // old strategy. Drop it once; from v5 on we only persist a strategy
           // the user actually edited.
+          delete p.strategy;
+          delete p.strategyCustomized;
+        }
+        if (version < 6) {
+          // A strategy customised before combos existed has no `combos` key.
+          // It would still score — activeCombos falls back to the shipped
+          // playbook — but the Combos tab would show defaults while the JSON
+          // showed none, which reads as data loss. Drop it and re-seed.
           delete p.strategy;
           delete p.strategyCustomized;
         }

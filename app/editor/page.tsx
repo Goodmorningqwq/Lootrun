@@ -10,20 +10,9 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTracker } from '../store';
 import TreeView from './TreeView';
-import { BEACON_COLORS } from '../../engine/types';
-
-/** Canonical beacon list — from the engine, never duplicated here. */
-const BEACON_LIST: readonly string[] = BEACON_COLORS;
-
-const CHIP: Record<string, string> = {
-  blue: 'bg-blue-600 text-white', purple: 'bg-purple-600 text-white',
-  yellow: 'bg-yellow-500 text-black', aqua: 'bg-cyan-500 text-black',
-  orange: 'bg-orange-500 text-black', green: 'bg-green-600 text-white',
-  darkGrey: 'bg-zinc-600 text-white', white: 'bg-zinc-100 text-black',
-  grey: 'bg-zinc-400 text-black', red: 'bg-red-600 text-white',
-  pink: 'bg-pink-500 text-black', crimson: 'bg-rose-900 text-white',
-  rainbow: 'bg-gradient-to-r from-red-500 via-yellow-400 to-blue-500 text-black',
-};
+import CombosTab from './CombosTab';
+import { DEFAULT_COMBOS, type Combo } from '../../engine/combos';
+import { BEACON_LIST, CHIP } from './beaconStyles';
 
 const BOOST_PREFIXES = new Set(['buffed', 'aqua', 'boosted', 'vibrant']);
 /** Split "buffed:white" -> {color:'white', boosted:true, prefix:'buffed'}. */
@@ -227,7 +216,7 @@ export default function Editor() {
   const [json, setJson] = useState('');
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [allOpen, setAllOpen] = useState(false);
-  const [panel, setPanel] = useState<'flow' | 'tree'>('flow');
+  const [panel, setPanel] = useState<'flow' | 'combos' | 'tree'>('combos');
 
   useEffect(() => setHydrated(true), []);
   useEffect(() => {
@@ -342,7 +331,7 @@ export default function Editor() {
               Tree is priority over MISSIONS HELD. */}
           <div className="flex items-center justify-between">
             <div className="flex gap-1">
-              {(['flow', 'tree'] as const).map((p) => (
+              {(['combos', 'flow', 'tree'] as const).map((p) => (
                 <button
                   key={p}
                   onClick={() => setPanel(p)}
@@ -363,6 +352,17 @@ export default function Editor() {
           </div>
 
           {panel === 'tree' && <TreeView />}
+
+          {panel === 'combos' && (
+            <CombosTab
+              combos={(strategy.combos ?? DEFAULT_COMBOS) as Combo[]}
+              onChange={(next, note) =>
+                mutate((d) => {
+                  d.combos = next;
+                }, note)
+              }
+            />
+          )}
 
           {panel === 'flow' && (
           <>

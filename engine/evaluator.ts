@@ -13,7 +13,7 @@
 import strategyJson from '../strategies/default.json';
 import missionsJson from '../data/missions.json';
 import trialsJson from '../data/trials.json';
-import archetypesJson from '../data/archetypes.json';
+import { DEFAULT_COMBOS, resolvedBias, type Combo } from './combos';
 import objectivesJson from '../data/mission_objectives.json';
 import { BEACON_COLORS, type BeaconColor, type OfferedBeacon, type RunState } from './types';
 import { beaconChoices, pendingMission, resolveTier, withOfferBoost } from './engine';
@@ -90,6 +90,8 @@ export interface Strategy {
   goals: { runnable: Condition & { all?: Condition[] } };
   safety: SafetyRule[];
   phases: Phase[];
+  /** The playbook. Omitted on strategies authored before combos moved here. */
+  combos?: Combo[];
   tactics?: Tactics;
   verdictScores?: VerdictScores;
   sideComboRule?: SideComboRule;
@@ -129,6 +131,52 @@ export function validateStrategy(obj: unknown): { ok: true; strategy: Strategy }
       }
     }
   }
+
+  // Combos are community-authored, so the errors here are the ones a
+  // non-programmer will actually hit. Say what is wrong and where.
+  if (s.combos !== undefined) {
+    if (!Array.isArray(s.combos)) return { ok: false, error: '"combos" must be an array' };
+    const seen = new Set<string>();
+    for (const [i, raw] of (s.combos as unknown[]).entries()) {
+      if (typeof raw !== 'object' || raw === null)
+        return { ok: false, error: `combo[${i}] is not an object` };
+      const c = raw as Record<string, unknown>;
+      const where = typeof c.name === 'string' ? `combo "${c.name}"` : `combo[${i}]`;
+
+      if (typeof c.id !== 'string') return { ok: false, error: `${where} needs a string "id"` };
+      if (seen.has(c.id)) return { ok: false, error: `duplicate combo id "${c.id}"` };
+      seen.add(c.id);
+
+      if (!Array.isArray(c.core))
+        return { ok: false, error: `${where}: "core" must be an array of mission ids` };
+      for (const m of c.core) {
+        if (typeof m !== 'string' || !MISSIONS[m])
+          return { ok: false, error: `${where}: "${String(m)}" is not a known mission` };
+      }
+
+      for (const key of ['wants', 'avoids'] as const) {
+        const list = c[key];
+        if (list === undefined) continue;
+        if (!Array.isArray(list))
+          return { ok: false, error: `${where}: "${key}" must be an ordered array of beacons` };
+        for (const col of list) {
+          if (typeof col !== 'string' || !validColors.has(col))
+            return { ok: false, error: `${where}: "${String(col)}" is not a valid beacon colour` };
+        }
+        if (new Set(list as string[]).size !== list.length)
+          return { ok: false, error: `${where}: "${key}" lists the same beacon twice` };
+      }
+
+      // Both lists at once is contradictory, and resolvedBias would have to
+      // pick a winner silently. Better to refuse the strategy.
+      const both = (c.wants as string[] | undefined)?.filter((w) =>
+        (c.avoids as string[] | undefined)?.includes(w),
+      );
+      if (both?.length)
+        return { ok: false, error: `${where}: "${both[0]}" is in both wants and avoids` };
+    }
+  }
+
   return { ok: true, strategy: obj as Strategy };
 }
 
@@ -141,7 +189,7 @@ export const DEFAULT_STRATEGY = strategyJson as unknown as Strategy;
 /**
  * The strategy the advisor scores against. Swappable at runtime so the editor
  * can apply a user-customised strategy without a rebuild. Module-level (like
- * MISSIONS/ARCHETYPES) rather than threaded through every function — the app
+ * MISSIONS) rather than threaded through every function — the app
  * and the sim worker both call setStrategy after loading a custom one.
  */
 let strategy: Strategy = DEFAULT_STRATEGY;
@@ -151,6 +199,19 @@ export function setStrategy(s: Strategy): void {
 }
 export function getStrategy(): Strategy {
   return strategy;
+}
+
+/**
+ * The active playbook. Read through a getter rather than a module const so an
+ * edited strategy takes effect everywhere without threading it through every
+ * signature — the same reason `strategy` itself is module-level.
+ *
+ * Falls back to the shipped combos when a strategy predates the move out of
+ * `data/archetypes.json`, so an old export still scores rather than silently
+ * losing its entire playbook.
+ */
+export function activeCombos(): Combo[] {
+  return strategy.combos ?? DEFAULT_COMBOS;
 }
 
 /** Expert classification — see data/missions.json `verdictTaxonomy`. */
@@ -193,17 +254,8 @@ for (const m of missionFile.missions) {
   if (m.strength === 'weak') WEAK_MISSIONS.add(m.id);
 }
 
-interface Archetype {
-  id: string;
-  name: string;
-  core: string[];
-  enablers?: string[];
-  followups?: string[][];
-  conflicts?: string[];
-  beaconBias?: Partial<Record<BeaconColor, number>>;
-  boonPreference?: string[];
-  notes?: string;
-}
+/** Combos were once called archetypes; the engine name is kept for continuity. */
+type Archetype = Combo;
 
 /**
  * The archetype a run has committed to, by best fit of held mission cores.
@@ -239,7 +291,7 @@ export function composeBeaconBias(
   const held = new Set(
     state.missions.filter((m) => !activatedOnly || m.fulfilled).map((m) => m.id),
   );
-  const matches = ARCHETYPES.filter(
+  const matches = activeCombos().filter(
     (a) => a.id !== 'universal' && (a.core ?? []).some((c) => held.has(c)),
   ).map((a) => {
     const core = a.core ?? [];
@@ -252,7 +304,7 @@ export function composeBeaconBias(
     let pos: BiasContribution | null = null;
     let neg: BiasContribution | null = null;
     for (const m of matches) {
-      const raw = m.a.beaconBias?.[color];
+      const raw = resolvedBias(m.a)[color];
       if (!raw) continue;
       const c: BiasContribution = {
         value: raw * m.completeness,
@@ -277,7 +329,7 @@ export function committedArchetype(state: RunState, activatedOnly = false): Arch
     state.missions.filter((m) => !activatedOnly || m.fulfilled).map((m) => m.id),
   );
   let best: { a: Archetype; hits: number } | null = null;
-  for (const a of ARCHETYPES) {
+  for (const a of activeCombos()) {
     if (a.id === 'universal') continue;
     const hits = a.core.filter((c) => held.has(c)).length;
     if (hits > 0 && (!best || hits > best.hits)) best = { a, hits };
@@ -291,7 +343,6 @@ export const TRIALS: Record<string, TrialSpec> = Object.fromEntries(
     .map((t) => [t.id, t]),
 );
 
-const ARCHETYPES = (archetypesJson as unknown as { archetypes: Archetype[] }).archetypes;
 
 interface ObjectiveType {
   id: string;
@@ -546,7 +597,7 @@ export function evaluateMissionOffer(state: RunState, offered: string[]): Missio
       }
     } else {
       // Nothing committed yet — a core is a speculative but real plan.
-      const starts = ARCHETYPES.filter((a) => a.id !== 'universal' && a.core.includes(id));
+      const starts = activeCombos().filter((a) => a.id !== 'universal' && a.core.includes(id));
       if (starts.length > 0) {
         // Worth the gamble only if slots remain to finish the archetype.
         score += slotsLeft >= 2 ? 70 : 30;
@@ -559,7 +610,7 @@ export function evaluateMissionOffer(state: RunState, offered: string[]): Missio
     }
 
     // --- universal value ----------------------------------------------
-    const universal = ARCHETYPES.find((a) => a.id === 'universal');
+    const universal = activeCombos().find((a) => a.id === 'universal');
     if (universal?.core.includes(id)) {
       const bonus = slotsLeft <= 1 ? 75 : 45;
       score += bonus;

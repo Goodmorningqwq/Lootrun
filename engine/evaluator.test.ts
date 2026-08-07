@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { createRun } from './engine';
+import { ladderValue } from './combos';
 import {
   activePhases,
   evaluateMissionOffer,
@@ -386,14 +387,17 @@ describe('combo bias composes across straddled combos', () => {
    * several combos silently lost every bias but one.
    */
   it('applies the strongest advocate across all matching combos', () => {
-    // Ostinato + Porph matches three combos at once:
-    //   curse_stack 1/1 (purple +40) · ostinato 1/1 (blue +35) · mix_match 2/2 (purple +30, blue +25)
+    // Ostinato + Porph matches three combos at once, all fully complete:
+    //   curse_stack (wants purple) · ostinato (wants blue) · mix_match (both)
     const s = runAt(15, { missions: slots('ostinato', 'porphyrophobia') });
     const bias = composeBeaconBias(s, true);
-    // Strongest advocate wins per colour — NOT the sum (+70), which would
+    const top = ladderValue('wants', 0);
+
+    // Strongest advocate wins per colour — NOT the sum, which would
     // double-count mix_match restating what the other two already say.
-    expect(bias.purple?.value).toBe(40);
-    expect(bias.blue?.value).toBe(35);
+    expect(bias.purple?.value).toBe(top);
+    expect(bias.blue?.value).toBe(top);
+    expect(bias.purple!.value).toBeLessThan(top * 2);
     expect(bias.purple?.from).toMatch(/Purple/);
   });
 
@@ -410,11 +414,12 @@ describe('combo bias composes across straddled combos', () => {
   });
 
   it('keeps advocate and objector when combos disagree', () => {
-    // flying_chest wants blue DOWN (-10); ostinato wants blue UP (+35).
+    // flying_chest AVOIDS blue; the ostinato combo WANTS it, fully complete.
     const bias = composeBeaconBias(runAt(15, { missions: slots('hoarder', 'ostinato') }), true);
-    // +35 advocate plus -3.3 objector — the conflict survives, not cancelled.
-    expect(bias.blue!.value).toBeGreaterThan(30);
-    expect(bias.blue!.value).toBeLessThan(35);
+    // The objector drags the advocate down without cancelling it — asserted as
+    // a direction, so tuning the ladder rungs cannot silently break this.
+    expect(bias.blue!.value).toBeLessThan(ladderValue('wants', 0));
+    expect(bias.blue!.value).toBeGreaterThan(0);
   });
 
   it('ignores combos whose missions are not yet activated', () => {

@@ -163,6 +163,22 @@ describe('the tree is worth drawing', () => {
     expect(orderings.size).toBeGreaterThan(4);
   });
 
+  it('reads the live playbook, so deleting a combo removes its badges', () => {
+    // Regression: `alsoIn` read data/archetypes.json directly while `commits`
+    // went through the engine, so deleting a combo in the editor left the tree
+    // citing a combo that no longer existed.
+    const before = treeNode(['ostinato']);
+    expect([before.commits?.name, ...before.alsoIn].join(' ')).toMatch(/Ostinato/);
+
+    setStrategy({
+      ...DEFAULT_STRATEGY,
+      combos: (DEFAULT_STRATEGY.combos ?? []).filter((c) => c.id !== 'ostinato'),
+    });
+    const after = treeNode(['ostinato']);
+
+    expect([after.commits?.name, ...after.alsoIn].join(' ')).not.toMatch(/pull generator/);
+  });
+
   it('a single core mission is enough to commit to its archetype', () => {
     const ost = treeNode(['ostinato']);
     expect(ost.commits).not.toBeNull();
