@@ -33,6 +33,7 @@ import {
   MISSIONS,
   activeCombos,
   committedArchetype,
+  verdictOf,
   evaluateMissionOffer,
   evaluateOffer,
   getStrategy,
@@ -134,7 +135,7 @@ function nextMissionsAt(state: RunState, held: Set<string>): NextMission[] {
     id: r.id,
     name: r.name,
     score: r.score,
-    verdict: MISSIONS[r.id]?.verdict,
+    verdict: verdictOf(r.id),
     why: r.reasons[0] ?? '',
   }));
 }
@@ -175,7 +176,7 @@ export function treeNode(missions: string[]): TreeNode {
     id,
     missions: [...missions],
     label: labelFor(missions),
-    verdict: newest ? MISSIONS[newest]?.verdict : undefined,
+    verdict: newest ? verdictOf(newest) : undefined,
     commits: committed ? { id: committed.id, name: committed.name } : null,
     alsoIn: newest
       ? lines().filter(

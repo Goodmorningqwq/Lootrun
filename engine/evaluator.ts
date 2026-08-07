@@ -92,6 +92,8 @@ export interface Strategy {
   phases: Phase[];
   /** The playbook. Omitted on strategies authored before combos moved here. */
   combos?: Combo[];
+  /** Per-mission verdict overrides — a fork disagreeing with the shipped call. */
+  missionVerdicts?: Record<string, Verdict>;
   tactics?: Tactics;
   verdictScores?: VerdictScores;
   sideComboRule?: SideComboRule;
@@ -177,6 +179,21 @@ export function validateStrategy(obj: unknown): { ok: true; strategy: Strategy }
     }
   }
 
+  if (s.missionVerdicts !== undefined) {
+    if (typeof s.missionVerdicts !== 'object' || s.missionVerdicts === null)
+      return { ok: false, error: '"missionVerdicts" must be an object' };
+    const valid = new Set<string>(VERDICT_ORDER);
+    for (const [id, v] of Object.entries(s.missionVerdicts as Record<string, unknown>)) {
+      if (!MISSIONS[id])
+        return { ok: false, error: `missionVerdicts: "${id}" is not a known mission` };
+      if (typeof v !== 'string' || !valid.has(v))
+        return {
+          ok: false,
+          error: `missionVerdicts."${id}": "${String(v)}" is not a verdict (${[...valid].join(', ')})`,
+        };
+    }
+  }
+
   return { ok: true, strategy: obj as Strategy };
 }
 
@@ -212,6 +229,20 @@ export function getStrategy(): Strategy {
  */
 export function activeCombos(): Combo[] {
   return strategy.combos ?? DEFAULT_COMBOS;
+}
+
+/**
+ * A mission's expert classification, with the active strategy allowed to
+ * disagree.
+ *
+ * The verdict in `data/missions.json` is one expert's opinion, not a game
+ * fact — the kind of thing a community author should be able to overrule
+ * without forking the dataset. An override layer keeps the shipped judgement
+ * intact and visible underneath, so a fork reads as a disagreement rather than
+ * a silent rewrite of the source.
+ */
+export function verdictOf(id: string): Verdict | undefined {
+  return strategy.missionVerdicts?.[id] ?? MISSIONS[id]?.verdict;
 }
 
 /** Expert classification — see data/missions.json `verdictTaxonomy`. */
@@ -603,7 +634,7 @@ const VERDICT_ORDER: Verdict[] = [
 ];
 
 function verdictRank(id: string): number {
-  const v = MISSIONS[id]?.verdict;
+  const v = verdictOf(id);
   const i = v ? VERDICT_ORDER.indexOf(v) : -1;
   return i < 0 ? VERDICT_ORDER.length : i;
 }
@@ -758,7 +789,7 @@ export function evaluateMissionOffer(state: RunState, offered: string[]): Missio
     // --- expert verdict -------------------------------------------------
     // The decisive fix: nothing previously stopped the advisor recommending
     // missions an expert says never to take.
-    const verdict = spec.verdict;
+    const verdict = verdictOf(id);
     if (verdict) {
       const adj = strategy.verdictScores?.[verdict];
       if (adj) {

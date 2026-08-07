@@ -12,6 +12,8 @@ import { useTracker } from '../store';
 import TreeView from './TreeView';
 import CombosTab from './CombosTab';
 import PhasesTab from './PhasesTab';
+import MissionsTab from './MissionsTab';
+import type { Verdict } from '../../engine/evaluator';
 import PriorityEditor, { condText, parseEntry } from './PriorityEditor';
 import { DEFAULT_COMBOS, type Combo } from '../../engine/combos';
 import { BEACON_LIST, CHIP } from './beaconStyles';
@@ -45,7 +47,7 @@ export default function Editor() {
   const [json, setJson] = useState('');
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [allOpen, setAllOpen] = useState(false);
-  const [panel, setPanel] = useState<'flow' | 'phases' | 'combos' | 'tree'>('combos');
+  const [panel, setPanel] = useState<'flow' | 'phases' | 'combos' | 'missions' | 'tree'>('combos');
 
   useEffect(() => setHydrated(true), []);
   useEffect(() => {
@@ -160,7 +162,7 @@ export default function Editor() {
               Tree is priority over MISSIONS HELD. */}
           <div className="flex items-center justify-between">
             <div className="flex gap-1">
-              {(['combos', 'phases', 'flow', 'tree'] as const).map((p) => (
+              {(['combos', 'phases', 'missions', 'flow', 'tree'] as const).map((p) => (
                 <button
                   key={p}
                   onClick={() => setPanel(p)}
@@ -181,6 +183,23 @@ export default function Editor() {
           </div>
 
           {panel === 'tree' && <TreeView />}
+
+          {panel === 'missions' && (
+            <MissionsTab
+              overrides={(strategy.missionVerdicts ?? {}) as Record<string, Verdict>}
+              weights={(verdictScores ?? {}) as Record<string, number>}
+              onOverrides={(next, note) =>
+                mutate((d) => {
+                  d.missionVerdicts = next;
+                }, note)
+              }
+              onWeights={(next, note) =>
+                mutate((d) => {
+                  d.verdictScores = next;
+                }, note)
+              }
+            />
+          )}
 
           {panel === 'phases' && (
             <PhasesTab

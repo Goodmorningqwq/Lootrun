@@ -17,7 +17,7 @@
  */
 
 import { createRun } from './engine';
-import { MISSIONS, evaluateMissionOffer } from './evaluator';
+import { MISSIONS, evaluateMissionOffer, verdictOf } from './evaluator';
 import { CANDIDATES } from './playbookTree';
 import type { RunState } from './types';
 
@@ -70,8 +70,8 @@ export function measureCoverage(state: RunState = createRun({ challengesComplete
 
         // Bad: the pick is expert-rejected while a better option was offered.
         const top = ranked[0]!;
-        const topBad = BAD.has(MISSIONS[top.id]?.verdict ?? '');
-        const alternative = offer.some((m) => !BAD.has(MISSIONS[m]?.verdict ?? ''));
+        const topBad = BAD.has(verdictOf(top.id) ?? '');
+        const alternative = offer.some((m) => !BAD.has(verdictOf(m) ?? ''));
         if (topBad && alternative) bad++;
       }
     }
