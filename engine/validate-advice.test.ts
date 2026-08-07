@@ -102,40 +102,34 @@ describe('advice quality (opt-in — npm run validate)', () => {
     console.log(`  win rate:   ${(r.winRate * 100).toFixed(0)}%   (50% = no signal)`);
     console.log(`  mean pulls: ${r.meanTop.toFixed(1)} vs ${r.meanBottom.toFixed(1)}`);
     console.log('NOTE: signal, not optimality — the advisor also weighs survival and reachability.');
-    console.log(`KNOWN REGRESSION: win rate was 65% before the salvage double-count fix. See below.`);
 
     expect(r.n).toBeGreaterThan(20);
-
-    // The top pick still returns more pulls ON AVERAGE, which is the effect
-    // that survived. It wins less often but by more when it wins.
     expect(r.meanTop).toBeGreaterThan(r.meanBottom);
-
-    expect(r.winRate).toBeGreaterThan(WIN_RATE_FLOOR);
+    expect(r.winRate).toBeGreaterThan(0.5);
   });
 });
 
 /**
- * A RECORD OF WHERE WE ARE, NOT A TARGET. The goal is still > 0.5.
+ * HISTORY, because the dip and the recovery both taught us something.
  *
- * Measured at 250 offers: 65% before the salvage double-count fix
- * (evaluateMissionOffer no longer pays High Roller both the universal bonus
- * and a "starts Salvage" bonus for the same fact), 38% after. The fix is not
- * in doubt — `sac_stack` core is a strict subset of `universal` core — but it
- * changes which missions a simulated run acquires, and therefore what its
- * beacons are worth.
+ * Measured at 250 offers. 65% originally. Fixing the salvage double-count in
+ * evaluateMissionOffer dropped it to 38% — runs finally committed to combos,
+ * and the beacon advice turned out to be calibrated for runs that never did.
  *
- * WHY THIS IS NOT SIMPLY "THE ADVICE GOT WORSE". Diagnostics show the losing
- * pick is overwhelmingly AQUA, beaten by green (19x), purple (10x) and yellow
- * (8x). Aqua pays indirectly by boosting the next beacon; those pay
- * immediately. Now that runs actually commit to combos, phase priority still
- * ranks aqua top when the direct payoffs may deserve it.
+ * Diagnosing that pointed at AQUA, beaten by green, purple and yellow. The
+ * real cause was worse than a mis-ranking: `rainbow_window` — which covers
+ * challenge 10 onward — did not list purple, yellow, green or darkGrey AT ALL,
+ * so the game's primary pull sources scored the unlisted-fallback 5 while aqua
+ * scored 80. Listing them and demoting aqua took it to 57%, and mean pulls
+ * from 620 to 756 — well above the original 645, because both arms of the
+ * comparison got better.
  *
- * WHY THE HARNESS CANNOT SETTLE IT ALONE. The combo payoff chains it scores
- * run on the estimated constants in missionEffects.ts (SIM_ECONOMY), while
- * High Roller pays a flat, certain +10 pulls. A simulator that under-models
- * combos will always prefer salvage, so asking it whether the advisor should
- * build combos is partly circular.
+ * The lesson worth keeping: a win rate that looks healthy can be measuring a
+ * strategy that is leaving most of its value on the table. Absolute yield and
+ * discrimination are different questions, and this harness only answers the
+ * second one.
  *
- * NEXT: retune the aqua-vs-direct-payoff ordering, then revisit this floor.
+ * Purple, yellow, green and darkGrey are still missing from several OTHER
+ * phases (opening, extension, trial_window) — see engine/aquaValue.test.ts,
+ * which prints the per-phase gaps.
  */
-const WIN_RATE_FLOOR = 0.33;

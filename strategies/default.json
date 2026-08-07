@@ -57,6 +57,18 @@
       }
     },
     {
+      "id": "boons-disabled",
+      "priority": 950,
+      "when": {
+        "flag": "ultimate_sacrifice"
+      },
+      "suppress": [
+        "blue"
+      ],
+      "why": "Ultimate Sacrifice disables your boons for 10 challenges, so a Blue Beacon grants a boon that does nothing. This is a veto, not a preference.",
+      "correctedFrom": "Was a -40 beacon bias in data/trials.json, which only worked while blue happened to sit near the bottom of the phase list. Reordering rainbow_window to include the payoff beacons lifted blue's phase score above the penalty and the veto silently stopped working. A dead beacon should be suppressed outright, not nudged by a number tuned to one phase."
+    },
+    {
       "id": "challenge-floor",
       "priority": 900,
       "when": {
@@ -229,15 +241,20 @@
       "beaconPriority": [
         "buffed:rainbow",
         "rainbow",
-        "aqua",
-        "buffed:white",
         "orange",
+        "darkGrey",
+        "purple",
+        "yellow",
+        "buffed:white",
+        "blue",
+        "green",
+        "aqua",
         "grey",
         "pink",
         "white",
-        "red",
-        "blue"
+        "red"
       ],
+      "priorityWhy": "Purple, yellow, green and darkGrey were absent from this list, so the game's primary pull sources scored the unlisted-fallback 5 while aqua scored 80 — for most of the run. Aqua now sits below the payoffs: it produces nothing itself, and pricing it exactly against purple's tier table (which is already denominated in pulls) shows aqua-then-purple equals purple-twice at base tier, and strictly LOSES under an active rainbow, where everything is vibrant and the tier cap eats the boost. Taking the payoff directly is never worse and does not gamble on the next offer.",
       "hardRule": {
         "rule": "Take rainbow on sight. Never skip it.",
         "why": "Rainbow uses a ramping hazard rate after challenge 10 — the chance climbs until it appears, then resets. Skipping forfeits an event you cannot re-roll into cheaply."

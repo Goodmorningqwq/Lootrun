@@ -351,11 +351,17 @@ describe('boosted priority tokens (buffed:/aqua:)', () => {
   });
 
   it('rainbow makes white boosted too — not just aqua', () => {
-    // rainbowChallengesLeft > 0 grants vibrancy, so white resolves tier 1.
-    const s = runAt(15, { rainbowChallengesLeft: 5 });
-    const a = evaluateOffer(s, [{ color: 'white' }, { color: 'orange' }]);
-    // In rainbow_window, buffed:white sits above orange.
-    expect(a.ranked[0]?.color).toBe('white');
+    // rainbowChallengesLeft > 0 grants vibrancy, so white resolves tier 1 and
+    // matches the `buffed:white` entry rather than the plain one. Asserted as
+    // the boost actually applying, not as beating one particular rival —
+    // reordering a phase must not be able to break a test about a mechanic.
+    const withRainbow = evaluateOffer(runAt(15, { rainbowChallengesLeft: 5 }), [
+      { color: 'white' },
+    ]).ranked[0]!;
+    const without = evaluateOffer(runAt(15), [{ color: 'white' }]).ranked[0]!;
+
+    expect(withRainbow.score).toBeGreaterThan(without.score);
+    expect(withRainbow.reasons.join(' ')).toMatch(/boosted white/i);
   });
 
   it('the validator rejects a priority typo', () => {
@@ -468,17 +474,19 @@ describe('per-mission / per-trial bias composes across combinations', () => {
   });
 
   it('a trial can veto a beacon the phase likes — Ultimate Sacrifice kills blue', () => {
-    const normal = scoreOf(runAt(15), 'blue');
-    const disabled = scoreOf(runAt(15, { trials: ['ultimate_sacrifice'] }), 'blue');
-    expect(disabled).toBe(normal - 40);
+    // Boons are disabled for 10 challenges, so a blue grants a boon that does
+    // nothing. Suppression rather than a penalty: a number large enough today
+    // stops being large enough the moment a phase list is reordered, which is
+    // exactly how this veto broke once already.
     const a = evaluateOffer(runAt(15, { trials: ['ultimate_sacrifice'] }), [
       { color: 'blue' },
       { color: 'red' },
     ]);
-    expect(a.ranked[0]?.color).toBe('red');
-    expect(a.ranked.find((r) => r.color === 'blue')!.reasons.join(' ')).toMatch(
-      /boons are DISABLED/i,
-    );
+    const blue = a.ranked.find((r) => r.color === 'blue')!;
+
+    expect(blue.suppressed).toBe(true);
+    expect(a.ranked.filter((r) => !r.suppressed)[0]?.color).toBe('red');
+    expect(blue.reasons.join(' ')).toMatch(/boons/i);
   });
 
   it('Gambling Beast makes green urgent', () => {
