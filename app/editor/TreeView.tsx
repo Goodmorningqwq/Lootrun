@@ -4,17 +4,21 @@
  * Playbook tree — the mission-decision axis.
  *
  * The Flow panel is a timeline (priority by challenge number). This is the
- * other axis: given these missions, what does priority become?
+ * other axis: given the missions you hold, what does priority become?
  *
  * Every number here is produced by calling the real evaluator, so the picture
  * cannot drift from the advice. Rainbow and aqua lead almost everywhere, which
  * is true but uninformative, so scores that DIFFER from the no-missions
  * baseline are highlighted — the differences are the point.
+ *
+ * Nodes are built lazily as rows are expanded; nothing below the visible
+ * frontier is computed.
  */
 
 import { useMemo, useState } from 'react';
-import { buildPlaybookTree, rootBaseline, type TreeNode } from '../../engine/playbookTree';
+import { childOf, rootBaseline, treeNode, type NextMission, type TreeNode } from '../../engine/playbookTree';
 import type { BeaconColor } from '../../engine/types';
+import { useTracker } from '../store';
 
 const CHIP: Record<string, string> = {
   blue: 'bg-blue-600 text-white', purple: 'bg-purple-600 text-white',
@@ -26,156 +30,168 @@ const CHIP: Record<string, string> = {
   rainbow: 'bg-gradient-to-r from-red-500 via-yellow-400 to-blue-500 text-black',
 };
 
+/** Verdicts the expert says not to build around — dimmed, never hidden. */
+const WEAK = new Set(['avoid', 'bloat']);
+
+const VERDICT_STYLE: Record<string, string> = {
+  core: 'bg-cyan-900 text-cyan-200',
+  enabler: 'bg-teal-900 text-teal-200',
+  pool: 'bg-zinc-700 text-zinc-300',
+  side: 'bg-indigo-900 text-indigo-200',
+  salvage: 'bg-amber-900 text-amber-200',
+  bloat: 'bg-zinc-800 text-zinc-500',
+  avoid: 'bg-red-950 text-red-300',
+};
+
+function Badge({ text, className = '' }: { text: string; className?: string }) {
+  return (
+    <span className={`rounded px-1.5 py-0.5 text-[10px] ${className || 'bg-zinc-800 text-zinc-400'}`}>
+      {text}
+    </span>
+  );
+}
+
+/** How many good picks to show before the "show all" divider. */
+const TOP_N = 8;
+
 function Node({
   node,
   baseline,
   depth,
-  defaultOpen,
 }: {
   node: TreeNode;
   baseline: Map<BeaconColor, number>;
   depth: number;
-  defaultOpen: boolean;
 }) {
-  const [open, setOpen] = useState(depth === 0);
-  const isOpen = defaultOpen || open;
+  const [open, setOpen] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
-  const border =
-    node.kind === 'fallback'
-      ? 'border-amber-800'
-      : node.kind === 'line'
-        ? 'border-cyan-900'
-        : 'border-zinc-800';
+  const strong = node.nextMissions.filter((m) => !WEAK.has(m.verdict ?? ''));
+  const weak = node.nextMissions.filter((m) => WEAK.has(m.verdict ?? ''));
+  const shown = showAll ? [...strong, ...weak] : strong.slice(0, TOP_N);
+  const hidden = node.nextMissions.length - shown.length;
+
+  const row = (m: NextMission) => {
+    const isOpen = open === m.id;
+    const dim = WEAK.has(m.verdict ?? '');
+    return (
+      <div key={m.id}>
+        <button
+          onClick={() => setOpen(isOpen ? null : m.id)}
+          title={m.why}
+          className={`flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-[12px] hover:bg-zinc-800 ${
+            dim ? 'opacity-55' : ''
+          } ${isOpen ? 'bg-zinc-800' : ''}`}
+        >
+          <span className="text-[10px] text-zinc-600">{isOpen ? '▾' : '▸'}</span>
+          <span className={isOpen ? 'font-semibold' : ''}>{m.name}</span>
+          {m.verdict && <Badge text={m.verdict} className={VERDICT_STYLE[m.verdict]} />}
+          <span className="ml-auto font-mono text-[11px] text-zinc-500">{m.score}</span>
+        </button>
+        {isOpen && (
+          <div className="my-1 ml-3 border-l border-zinc-800 pl-2.5">
+            <Node node={childOf(node, m.id)} baseline={baseline} depth={depth + 1} />
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div className={`rounded-lg border ${border} bg-zinc-900`}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-baseline gap-2 p-2 text-left hover:bg-zinc-800/50"
-      >
-        <span className="text-[10px] text-zinc-600">{node.children.length > 0 ? (isOpen ? '▾' : '▸') : '·'}</span>
-        <span className={`text-sm font-semibold ${node.kind === 'fallback' ? 'text-amber-300' : ''}`}>
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-2">
+      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+        <span className="text-sm font-semibold">
+          {depth > 0 && <span className="text-zinc-600">+ </span>}
           {node.label}
         </span>
-        <span className="text-[10px] text-zinc-600">
-          {node.missions.length}/3 slots · {node.slotsLeft} left
+        {node.verdict && <Badge text={node.verdict} className={VERDICT_STYLE[node.verdict]} />}
+        {node.commits && (
+          <Badge text={`commits: ${node.commits.name}`} className="bg-cyan-950 text-cyan-300" />
+        )}
+        {node.alsoIn.length > 0 && <Badge text={`also in: ${node.alsoIn.join(', ')}`} />}
+        <span className="ml-auto text-[10px] text-zinc-600">
+          {node.missions.length}/3 slots
         </span>
-      </button>
+      </div>
 
-      {isOpen && (
-        <div className="space-y-2 border-t border-zinc-800 px-2 py-2">
-          {node.note && <p className="text-[11px] text-zinc-500">{node.note}</p>}
+      {node.note && <p className="mb-2 text-[11px] text-zinc-500">{node.note}</p>}
 
-          <div>
-            <div className="mb-1 text-[10px] uppercase tracking-wide text-zinc-600">
-              beacon priority here
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {node.beacons.map((b) => {
-                const base = baseline.get(b.color);
-                const changed = base !== undefined && base !== b.score;
-                const delta = changed ? b.score - base! : 0;
-                return (
-                  <span
-                    key={b.color}
-                    title={b.why}
-                    className={`rounded px-1.5 py-0.5 text-[11px] ${CHIP[b.color] ?? 'bg-zinc-700'} ${
-                      changed ? 'ring-2 ring-white' : 'opacity-60'
-                    }`}
-                  >
-                    {b.color} {b.score}
-                    {changed && (
-                      <b className="ml-1">
-                        {delta > 0 ? '↑' : '↓'}
-                        {Math.abs(delta)}
-                      </b>
-                    )}
-                  </span>
-                );
-              })}
-            </div>
+      <div className="mb-1 text-[10px] uppercase tracking-wide text-zinc-600">
+        beacon priority here
+      </div>
+      <div className="mb-3 flex flex-wrap gap-1">
+        {node.beacons.map((b) => {
+          const base = baseline.get(b.color);
+          const changed = base !== undefined && base !== b.score;
+          const delta = changed ? b.score - base! : 0;
+          return (
+            <span
+              key={b.color}
+              title={b.why}
+              className={`rounded px-1.5 py-0.5 text-[11px] ${CHIP[b.color] ?? 'bg-zinc-700'} ${
+                changed ? 'ring-2 ring-white' : 'opacity-60'
+              }`}
+            >
+              {b.color} {b.score}
+              {changed && (
+                <b className="ml-1">
+                  {delta > 0 ? '↑' : '↓'}
+                  {Math.abs(delta)}
+                </b>
+              )}
+            </span>
+          );
+        })}
+      </div>
+
+      {node.nextMissions.length > 0 ? (
+        <>
+          <div className="mb-1 text-[10px] uppercase tracking-wide text-zinc-600">
+            take next — ranked over all {node.nextMissions.length} candidates
           </div>
-
-          {node.nextMissions.length > 0 && (
-            <div>
-              <div className="mb-1 text-[10px] uppercase tracking-wide text-zinc-600">
-                take next
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {node.nextMissions.map((m, i) => (
-                  <span
-                    key={m.id}
-                    className={`rounded px-1.5 py-0.5 text-[11px] ${
-                      i === 0 ? 'bg-green-800 text-green-100' : 'bg-zinc-800 text-zinc-400'
-                    }`}
-                  >
-                    {m.name} <span className="opacity-60">{m.score}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
+          <div>{shown.map(row)}</div>
+          {hidden > 0 && (
+            <button
+              onClick={() => setShowAll(true)}
+              className="mt-1 w-full rounded border-t border-zinc-800 pt-1.5 text-[11px] text-zinc-500 hover:text-zinc-300"
+            >
+              + show all {node.nextMissions.length} candidates ({hidden} more, including avoid/bloat)
+            </button>
           )}
-
-          {node.trials.length > 0 && (
-            <div className="text-[11px] text-zinc-500">
-              trials: <span className="text-rose-300">{node.trials.join(' ▸ ')}</span>
-            </div>
-          )}
-
-          {node.children.length > 0 && (
-            <div className="space-y-1.5 border-l border-zinc-800 pl-3">
-              {node.children.map((c) => (
-                <Node key={c.id} node={c} baseline={baseline} depth={depth + 1} defaultOpen={false} />
-              ))}
-            </div>
-          )}
-        </div>
+        </>
+      ) : (
+        <p className="text-[11px] text-zinc-500">
+          All 3 mission slots are full — nothing left to decide.
+        </p>
       )}
     </div>
   );
 }
 
 export default function TreeView() {
-  const [depth, setDepth] = useState(2);
-  const tree = useMemo(() => buildPlaybookTree({ depth, beaconLimit: 6 }), [depth]);
+  // The tree is derived from the ACTIVE strategy, so it must recompute when the
+  // strategy is edited in the panel next door.
+  const strategy = useTracker((s) => s.strategy);
 
-  // Full "no missions" ordering — see rootBaseline for why it must not be the
-  // truncated list the root node displays.
-  const baseline = useMemo(() => rootBaseline(), []);
+  const root = useMemo(() => treeNode([]), [strategy]);
+  const baseline = useMemo(() => rootBaseline(), [strategy]);
 
   return (
     <section className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="font-semibold">Playbook tree</h2>
-        <label className="flex items-center gap-1.5 text-[11px] text-zinc-500">
-          depth
-          <select
-            value={depth}
-            onChange={(e) => setDepth(Number(e.target.value))}
-            className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-200"
-          >
-            <option value={1}>1 — entry points only</option>
-            <option value={2}>2 — plus follow-ups</option>
-          </select>
-        </label>
-      </div>
+      <h2 className="font-semibold">Playbook tree</h2>
 
       <p className="text-xs text-zinc-500">
-        Branches on <b>missions</b>, not beacon offers — offers branch ~286 ways per challenge,
-        missions only 3 deep. Every score is a live call to the advisor, so this cannot drift from
-        the real advice. Chips that <b className="text-zinc-300">differ from the no-missions
-        baseline</b> are ringed; dimmed ones score the same everywhere.
+        Branches on the <b>mission you take</b> — one per edge, which is the decision the game
+        actually asks you to make. Beacon offers branch ~286 ways per challenge and cannot be
+        drawn; missions branch 3 deep. Every score is a live call to the advisor, so this cannot
+        drift from the real advice. Chips that{' '}
+        <b className="text-zinc-300">differ from the no-missions baseline</b> are ringed; dimmed
+        ones score the same everywhere. Combos are shown as{' '}
+        <span className="rounded bg-cyan-950 px-1 text-[10px] text-cyan-300">commits:</span> badges
+        rather than as branches — you discover which combo you are in, you do not pick one.
       </p>
 
-      <div className="space-y-2">
-        <Node node={tree} baseline={baseline} depth={0} defaultOpen={false} />
-      </div>
-
-      <p className="text-[11px] text-zinc-600">
-        Shows the <b>named lines</b> and the salvage fallback — not all ~250k mission/trial
-        combinations, which cannot be drawn. The coverage test is what proves the unnamed
-        remainder is handled.
-      </p>
+      <Node node={root} baseline={baseline} depth={0} />
     </section>
   );
 }

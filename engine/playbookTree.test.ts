@@ -4,17 +4,12 @@
  * plus the structural properties the UI relies on.
  */
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { createRun, legalColors } from './engine';
-import { evaluateOffer } from './evaluator';
-import { buildPlaybookTree, rootBaseline, walkTree, type TreeNode } from './playbookTree';
+import { DEFAULT_STRATEGY, MISSIONS, evaluateOffer, setStrategy } from './evaluator';
+import { CANDIDATES, childOf, rootBaseline, treeNode, type TreeNode } from './playbookTree';
 
-const tree = buildPlaybookTree({ depth: 2, beaconLimit: 6 });
-
-const nodes: TreeNode[] = [];
-walkTree(tree, (n) => nodes.push(n));
-
-/** Rebuild the node's state the same way playbookTree does. */
+/** Rebuild a node's state the same way playbookTree does. */
 function stateFor(missions: string[]) {
   return createRun({
     challengesCompleted: 12,
@@ -24,11 +19,25 @@ function stateFor(missions: string[]) {
   });
 }
 
+/** Walk a representative slice: root, its top picks, and their top picks. */
+function samplePaths(): TreeNode[] {
+  const root = treeNode([]);
+  const out: TreeNode[] = [root];
+  for (const a of root.nextMissions.slice(0, 6)) {
+    const one = childOf(root, a.id);
+    out.push(one);
+    for (const b of one.nextMissions.slice(0, 3)) out.push(childOf(one, b.id));
+  }
+  return out;
+}
+
+afterEach(() => setStrategy(DEFAULT_STRATEGY));
+
 describe('the tree is generated, not authored', () => {
   it('every rendered priority equals a live evaluateOffer call for that node', () => {
     // This is the acceptance gate. If someone hand-edits a score, or the
     // evaluator changes and the tree does not, this fails.
-    for (const node of nodes) {
+    for (const node of samplePaths()) {
       const state = stateFor(node.missions);
       const live = evaluateOffer(
         state,
@@ -44,72 +53,129 @@ describe('the tree is generated, not authored', () => {
   });
 
   it('shows only beacons that are legal in that state', () => {
-    for (const node of nodes) {
-      const legal = new Set(legalColors(stateFor(node.missions)).map((c) => c));
+    for (const node of samplePaths()) {
+      const legal = new Set(legalColors(stateFor(node.missions)));
       for (const b of node.beacons) expect(legal.has(b.color)).toBe(true);
     }
   });
 });
 
+describe('candidates', () => {
+  it('covers every real mission and excludes the unreal ones', () => {
+    expect(CANDIDATES).toHaveLength(27);
+    // Deleted from the game — the user was explicit that it does not exist.
+    expect(CANDIDATES).not.toContain('chronokinesis');
+    // The 2.2.1 placeholder has no `effect`, so MISSIONS drops it already.
+    expect(CANDIDATES).not.toContain('unknown_2_2_1_missions');
+    for (const id of CANDIDATES) expect(MISSIONS[id]).toBeDefined();
+  });
+});
+
+describe('the mission set, not the path, determines the node', () => {
+  it('the same two missions in either order give the same advice', () => {
+    const ab = treeNode(['hoarder', 'ostinato']);
+    const ba = treeNode(['ostinato', 'hoarder']);
+    expect(ab.id).toBe(ba.id);
+    expect(ab.beacons).toEqual(ba.beacons);
+    expect(ab.nextMissions).toEqual(ba.nextMissions);
+    // …but each still reports the path the caller actually walked.
+    expect(ab.missions).toEqual(['hoarder', 'ostinato']);
+    expect(ba.missions).toEqual(['ostinato', 'hoarder']);
+    expect(ab.label).not.toBe(ba.label);
+  });
+});
+
+describe('the cache cannot serve stale advice', () => {
+  it('recomputes when the strategy changes', () => {
+    // Regression test: the cache is keyed by mission set, so without a
+    // generation guard an edited strategy would keep showing old numbers.
+    const before = treeNode(['gourmand']).nextMissions.find((m) => m.id === 'high_roller')!;
+
+    setStrategy({
+      ...DEFAULT_STRATEGY,
+      verdictScores: { ...DEFAULT_STRATEGY.verdictScores, salvage: 999 },
+    });
+    const after = treeNode(['gourmand']).nextMissions.find((m) => m.id === 'high_roller')!;
+
+    expect(after.score).toBeGreaterThan(before.score);
+  });
+});
+
 describe('structure the UI depends on', () => {
   it('never proposes more missions than the 3 slots allow', () => {
-    for (const node of nodes) {
+    for (const node of samplePaths()) {
       expect(node.missions.length).toBeLessThanOrEqual(3);
       expect(node.slotsLeft).toBe(3 - node.missions.length);
     }
   });
 
   it('a child holds its parent missions plus exactly one more', () => {
-    walkTree(tree, (n) => {
-      for (const c of n.children) {
-        if (n.kind === 'root') continue; // level 1 introduces whole cores
-        expect(c.missions).toEqual(expect.arrayContaining(n.missions));
-        expect(c.missions.length).toBe(n.missions.length + 1);
-      }
-    });
+    const root = treeNode([]);
+    const one = childOf(root, root.nextMissions[0]!.id);
+    const two = childOf(one, one.nextMissions[0]!.id);
+    expect(one.missions.length).toBe(1);
+    expect(two.missions).toEqual(expect.arrayContaining(one.missions));
+    expect(two.missions.length).toBe(2);
   });
 
-  it('never repeats a mission within a branch', () => {
-    for (const node of nodes) {
-      expect(new Set(node.missions).size).toBe(node.missions.length);
-    }
+  it('stops offering missions once all 3 slots are full', () => {
+    const full = treeNode(['ostinato', 'hoarder', 'orphions_grace']);
+    expect(full.slotsLeft).toBe(0);
+    expect(full.nextMissions).toEqual([]);
   });
 
-  it('never suggests taking a mission already held', () => {
-    for (const node of nodes) {
+  it('never suggests a mission already held', () => {
+    for (const node of samplePaths()) {
       const held = new Set(node.missions);
       for (const m of node.nextMissions) expect(held.has(m.id)).toBe(false);
     }
   });
 
   it('ranks next-missions and beacons best-first', () => {
-    for (const node of nodes) {
+    for (const node of samplePaths()) {
       const bs = node.beacons.map((b) => b.score);
       expect([...bs].sort((a, b) => b - a)).toEqual(bs);
       const ms = node.nextMissions.map((m) => m.score);
       expect([...ms].sort((a, b) => b - a)).toEqual(ms);
     }
   });
-
-  it('gives every node a unique id so React keys are stable', () => {
-    const ids = nodes.map((n) => n.id);
-    expect(new Set(ids).size).toBe(ids.length);
-  });
 });
 
 describe('the tree is worth drawing', () => {
-  it('branches — different missions really do produce different priority', () => {
-    // If every node showed the same ordering the view would be pointless.
+  it('the root offers every candidate, so no forced pick is unreachable', () => {
+    // Challenge 4 can force a mission nobody's core wants; the old combo-rooted
+    // tree had no node for those at all.
+    expect(treeNode([]).nextMissions).toHaveLength(CANDIDATES.length);
+    expect(treeNode([]).nextMissions.map((m) => m.id)).toContain('gourmand');
+  });
+
+  it('a mission the expert says to avoid still produces real advice', () => {
+    const forced = treeNode(['gourmand']);
+    expect(forced.beacons.length).toBeGreaterThan(0);
+    expect(forced.nextMissions.length).toBeGreaterThan(0);
+    expect(forced.verdict).toBe('avoid');
+  });
+
+  it('branches — different first missions really do produce different priority', () => {
     const orderings = new Set(
-      nodes.map((n) => n.beacons.map((b) => b.color).join('>')),
+      CANDIDATES.map((id) => treeNode([id]).beacons.map((b) => b.color).join('>')),
     );
     expect(orderings.size).toBeGreaterThan(4);
   });
 
-  it('always offers a salvage branch, because no offer is ever dead', () => {
-    const fallback = nodes.find((n) => n.kind === 'fallback');
-    expect(fallback).toBeDefined();
-    expect(fallback!.beacons.length).toBeGreaterThan(0);
+  it('a single core mission is enough to commit to its archetype', () => {
+    const ost = treeNode(['ostinato']);
+    expect(ost.commits).not.toBeNull();
+    // Ostinato sits in more than one combo's core, which the badge must show.
+    expect(ost.alsoIn.length).toBeGreaterThan(0);
+  });
+
+  it("acquiring a combo member raises that combo's payoff beacon", () => {
+    // Ostinato wants boons, so blue must score higher once it is held than at
+    // the no-missions root. This is the tree's central promise in one assertion.
+    const base = rootBaseline().get('blue') ?? 0;
+    const withOst = treeNode(['ostinato']).beacons.find((b) => b.color === 'blue')?.score ?? 0;
+    expect(withOst).toBeGreaterThan(base);
   });
 
   it('the baseline covers every colour a node can promote', () => {
@@ -117,18 +183,8 @@ describe('the tree is worth drawing', () => {
     // baseline is missing a colour, the biggest movers render as unchanged —
     // the failure this test exists to catch.
     const base = rootBaseline();
-    for (const node of nodes) {
+    for (const node of samplePaths()) {
       for (const b of node.beacons) expect(base.has(b.color)).toBe(true);
     }
-  });
-
-  it('acquiring a combo member raises that combo\'s payoff beacon', () => {
-    // Ostinato wants boons, so blue must score higher once it is held than at
-    // the no-missions root. This is the tree's central promise in one assertion.
-    const root = tree.beacons.find((b) => b.color === 'blue')?.score ?? 0;
-    const ost = nodes.find((n) => n.missions.includes('ostinato'));
-    expect(ost).toBeDefined();
-    const withOst = ost!.beacons.find((b) => b.color === 'blue')?.score ?? 0;
-    expect(withOst).toBeGreaterThan(root);
   });
 });
