@@ -112,6 +112,7 @@
     {
       "id": "sac_stack",
       "name": "Salvage — raw reroll / sac",
+      "fallback": true,
       "core": [
         "high_roller",
         "redemption"
@@ -179,6 +180,7 @@
     {
       "id": "universal",
       "name": "No Commitment",
+      "fallback": true,
       "core": [
         "high_roller",
         "redemption",

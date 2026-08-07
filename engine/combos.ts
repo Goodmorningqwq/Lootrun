@@ -36,6 +36,16 @@ export interface Combo {
   name: string;
   /** Hold ANY of these and the combo commits. Completeness = held / core. */
   core: string[];
+  /**
+   * A safety net, not a plan.
+   *
+   * `sac_stack` core is a strict SUBSET of `universal` core, so before this
+   * flag existed High Roller and Redemption collected the stateless-value
+   * bonus AND a "starts Salvage" bonus — the same fact paid twice under two
+   * names, putting salvage above every real combo starter on every run.
+   * Fallback combos never score as a speculative commitment.
+   */
+  fallback?: boolean;
   /** Independent entry points, when a combo has more than one (combo 1). */
   cores?: string[][];
   enablers?: string[];
@@ -106,7 +116,7 @@ interface LegacyArchetype {
 
 /** Fields the engine reads. Everything else is prose and moves to `meta`. */
 const LIVE_FIELDS = new Set([
-  'id', 'name', 'core', 'cores', 'enablers', 'followups',
+  'id', 'name', 'fallback', 'core', 'cores', 'enablers', 'followups',
   'conflicts', 'wants', 'avoids', 'trialPreference', 'notes',
 ]);
 
@@ -128,6 +138,7 @@ export function comboFromArchetype(a: LegacyArchetype): Combo {
   return {
     id: a.id,
     name: a.name,
+    ...(a.fallback ? { fallback: true as const } : {}),
     core: a.core ?? [],
     ...(a.cores ? { cores: a.cores as string[][] } : {}),
     ...(a.enablers ? { enablers: a.enablers as string[] } : {}),

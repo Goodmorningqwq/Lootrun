@@ -549,6 +549,54 @@ function requiredRoles(): string[] {
  * the run to an archetype, so scoring is "how well does this fit the plan we
  * are already on — or could still start" rather than a flat tier list.
  */
+/**
+ * How strongly an uncommitted run should want a mission, based on the best
+ * role it could play in any plan.
+ *
+ * Takes the BEST relationship rather than summing them — the same
+ * strongest-advocate rule `composeBeaconBias` uses, and for the same reason:
+ * combos overlap heavily (Materialism is both an enabler AND a follow-up of
+ * the chest combo, Orphion's Grace follows three), so summing would pay
+ * repeatedly for one strategic intent.
+ */
+/**
+ * Preference order for breaking score ties. Lower is better. Missions the
+ * expert rejected must never win a tie against one they did not.
+ */
+const VERDICT_ORDER: Verdict[] = [
+  'core', 'enabler', 'pool', 'side', 'salvage', 'bloat', 'avoid', 'deleted',
+];
+
+function verdictRank(id: string): number {
+  const v = MISSIONS[id]?.verdict;
+  const i = v ? VERDICT_ORDER.indexOf(v) : -1;
+  return i < 0 ? VERDICT_ORDER.length : i;
+}
+
+const SPECULATIVE = [
+  { key: 'core', bonus: 70, label: 'Starts' },
+  { key: 'enabler', bonus: 40, label: 'Enables' },
+  { key: 'followup', bonus: 25, label: 'Follows up' },
+] as const;
+
+function bestSpeculativeFit(
+  plans: Combo[],
+  id: string,
+): { bonus: number; label: string; combos: Combo[] } | null {
+  const roleIn = (a: Combo): (typeof SPECULATIVE)[number]['key'] | null => {
+    if (a.core.includes(id)) return 'core';
+    if (a.enablers?.includes(id)) return 'enabler';
+    if ((a.followups ?? []).some((t) => t.includes(id))) return 'followup';
+    return null;
+  };
+
+  for (const rung of SPECULATIVE) {
+    const combos = plans.filter((a) => roleIn(a) === rung.key);
+    if (combos.length > 0) return { bonus: rung.bonus, label: rung.label, combos };
+  }
+  return null;
+}
+
 export function evaluateMissionOffer(state: RunState, offered: string[]): MissionAdvice {
   const held = state.missions.map((m) => m.id);
   const heldSet = new Set(held);
@@ -596,15 +644,26 @@ export function evaluateMissionOffer(state: RunState, offered: string[]): Missio
         reasons.push(`⚠ Conflicts with ${a.name}`);
       }
     } else {
-      // Nothing committed yet — a core is a speculative but real plan.
-      const starts = activeCombos().filter((a) => a.id !== 'universal' && a.core.includes(id));
-      if (starts.length > 0) {
-        // Worth the gamble only if slots remain to finish the archetype.
-        score += slotsLeft >= 2 ? 70 : 30;
+      // Nothing committed yet. A core STARTS a plan; an enabler or follow-up
+      // is worth less but is not worthless — before this, they scored exactly
+      // zero until their core turned up, which left the advisor with nothing
+      // to say about whole offers (the "blind offer" problem).
+      //
+      // Fallback combos are skipped: they hand out the universal bonus below
+      // for the very same missions, and paying twice for one fact is what put
+      // salvage above every real combo starter.
+      const plans = activeCombos().filter((a) => !a.fallback);
+      const fit = bestSpeculativeFit(plans, id);
+
+      if (fit) {
+        // A speculative pick needs slots left to pay off, so scale it down
+        // rather than dropping it — even the last slot has some upside.
+        score += Math.round(fit.bonus * (slotsLeft >= 2 ? 1 : 0.43));
+        const names = fit.combos.map((a) => a.name).join(' / ');
         reasons.push(
           slotsLeft >= 2
-            ? `Starts ${starts.map((a) => a.name).join(' / ')} — ${slotsLeft} slots left to build it`
-            : `Starts ${starts[0]?.name}, but only ${slotsLeft} slot left to finish it`,
+            ? `${fit.label} ${names} — ${slotsLeft} slots left to build it`
+            : `${fit.label} ${names}, but only ${slotsLeft} slot left to finish it`,
         );
       }
     }
@@ -697,7 +756,12 @@ export function evaluateMissionOffer(state: RunState, offered: string[]): Missio
     return { id, name: spec.name, effect: spec.effect ?? '', score, reasons };
   });
 
-  ranked.sort((a, b) => b.score - a.score);
+  // On a tie, prefer the better expert verdict rather than whatever order the
+  // offer happened to arrive in. Without this a `bloat` mission that lands on
+  // the same score as a `side` one — Cleansing Greed and Knife Edge both sit
+  // at -15 from an empty board — can be presented as the top pick purely by
+  // accident of argument order.
+  ranked.sort((a, b) => b.score - a.score || verdictRank(a.id) - verdictRank(b.id));
 
   return {
     committed: best
