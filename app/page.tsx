@@ -20,6 +20,7 @@ import {
   withOfferBoost,
 } from '../engine/engine';
 import { activePhases, evaluateMissionOffer, evaluateOffer } from '../engine/evaluator';
+import { comboStatuses, leadingCombo } from '../engine/comboStatus';
 import {
   BEACONS,
   RANKS,
@@ -920,6 +921,36 @@ export default function Tracker() {
       <section className="grid gap-4 md:grid-cols-2">
         <div className="rounded-xl bg-zinc-900 p-4">
           <h2 className="mb-1 font-semibold">Missions ({run.missions.length}/3)</h2>
+
+          {/* Which plan the run is on, and which are no longer reachable.
+              Without this the advisor will happily keep steering toward a
+              combo that ran out of mission slots two challenges ago. */}
+          {(() => {
+            const statuses = comboStatuses(run);
+            const lead = leadingCombo(run);
+            const dead = statuses.filter((s) => s.state === 'dead');
+            if (!lead && dead.length === 0) return null;
+            return (
+              <div className="mb-2 space-y-1 text-xs">
+                {lead && (
+                  <p className="text-cyan-300">
+                    <b className="font-semibold">On plan:</b> {lead.combo.name}{' '}
+                    <span className="text-zinc-500">
+                      — {lead.held.length}/{lead.combo.core.length}
+                      {lead.state === 'complete' ? ', final' : `, ${lead.why}`}
+                    </span>
+                  </p>
+                )}
+                {dead.length > 0 && (
+                  <p className="text-zinc-500">
+                    <b className="font-semibold text-zinc-400">Off the table:</b>{' '}
+                    {dead.map((d) => d.combo.name.replace(/ —.*$/, '')).join(', ')}
+                  </p>
+                )}
+              </div>
+            );
+          })()}
+
           {pending && (
             <p className="mb-2 text-xs text-amber-400">
               ⏳ {MISSIONS.find((m) => m.id === pending.id)?.name} not yet active
