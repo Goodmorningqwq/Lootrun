@@ -16,7 +16,7 @@ import MissionsTab from './MissionsTab';
 import type { Verdict } from '../../engine/evaluator';
 import PriorityEditor, { condText, parseEntry } from './PriorityEditor';
 import { DEFAULT_COMBOS, type Combo } from '../../engine/combos';
-import { BEACON_LIST, CHIP } from './beaconStyles';
+import { CHIP } from './beaconStyles';
 
 /** Numeric knob that writes straight back into the strategy. */
 function NumberKnob({
@@ -379,32 +379,6 @@ export default function Editor() {
             </>
           )}
 
-          {/* Verdict scores — the expert classification weights. */}
-          {verdictScores && (
-            <>
-              <h2 className="pt-2 font-semibold">Verdict weights</h2>
-              <p className="text-xs text-zinc-500">
-                Applied to mission ranking. Negative values push a mission down. These encode one
-                expert&apos;s opinion — disagree freely.
-              </p>
-              <div className="space-y-1 rounded-lg border border-zinc-800 bg-zinc-900 p-2">
-                {Object.entries(verdictScores)
-                  .filter(([, v]) => typeof v === 'number')
-                  .map(([k, v]) => (
-                    <NumberKnob
-                      key={k}
-                      label={k}
-                      value={v as number}
-                      onChange={(nv) =>
-                        mutate((d) => {
-                          (d.verdictScores as Record<string, unknown>)[k] = nv;
-                        }, `verdictScores.${k} = ${nv}`)
-                      }
-                    />
-                  ))}
-              </div>
-            </>
-          )}
           </>
           )}
         </section>

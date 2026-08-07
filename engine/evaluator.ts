@@ -245,6 +245,15 @@ export function verdictOf(id: string): Verdict | undefined {
   return strategy.missionVerdicts?.[id] ?? MISSIONS[id]?.verdict;
 }
 
+/**
+ * NOTE ON `deleted`. The candidate list in playbookTree filters on the SHIPPED
+ * verdict, not this override, and that is deliberate. Shipped `deleted` means
+ * the mission is not in the game (Chronokinesis), which no strategy may
+ * contradict. A user marking something `deleted` means "I refuse to take this"
+ * — an opinion, which correctly leaves it in the offer pool scoring -250 rather
+ * than editing it out of Wynncraft.
+ */
+
 /** Expert classification — see data/missions.json `verdictTaxonomy`. */
 export type Verdict =
   | 'core' | 'pool' | 'enabler' | 'side' | 'salvage' | 'bloat' | 'avoid' | 'deleted';
@@ -865,8 +874,8 @@ export function evaluateOffer(state: RunState, offer: OfferedBeacon[]): Advice {
   }
 
   // Only ACTIVATED missions steer beacon priority — an un-activated mission
-  // has no effect yet (point 5 of the playtest feedback).
-  const archetype = committedArchetype(state, true);
+  // has no effect yet (point 5 of the playtest feedback). The archetype itself
+  // is no longer read here: composeBeaconBias spans every matching combo.
   // Composed across ALL matching combos, not just the best-fitting one.
   const bias = composeBeaconBias(state, true);
 

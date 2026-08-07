@@ -47,10 +47,15 @@ export default function MissionsTab({
   const [open, setOpen] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
 
-  /** Which combos name this mission, and in what role. */
+  /**
+   * Which combos name this mission, and in what role. Keyed on the live
+   * playbook — memoising this with empty deps left it showing claims from
+   * combos the user had already edited or deleted.
+   */
+  const combos = activeCombos();
   const claims = useMemo(() => {
     const m = new Map<string, string[]>();
-    for (const c of activeCombos()) {
+    for (const c of combos) {
       const add = (id: string, role: string) =>
         m.set(id, [...(m.get(id) ?? []), `${c.name} (${role})`]);
       for (const id of c.core ?? []) add(id, 'core');
@@ -58,7 +63,7 @@ export default function MissionsTab({
       for (const t of c.followups ?? []) for (const id of t) add(id, 'follow-up');
     }
     return m;
-  }, []);
+  }, [combos]);
 
   const missions = Object.values(MISSIONS).sort((a, b) => a.name.localeCompare(b.name));
   const shown = showAll ? missions : missions.filter((m) => (claims.get(m.id) ?? []).length > 0);
