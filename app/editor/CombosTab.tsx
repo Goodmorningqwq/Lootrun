@@ -411,6 +411,38 @@ export default function CombosTab({
                       className="w-full rounded bg-zinc-800 px-2 py-1 text-sm"
                       aria-label="combo name"
                     />
+                    <label
+                      className="flex cursor-pointer items-start gap-2 rounded border border-zinc-800 bg-zinc-950 p-2 text-[11px]"
+                      title="Fallback combos never score as a speculative commitment."
+                    >
+                      <input
+                        type="checkbox"
+                        checked={c.fallback ?? false}
+                        onChange={(e) =>
+                          patch(
+                            c.id,
+                            (x) => {
+                              const next = { ...x };
+                              if (e.target.checked) next.fallback = true;
+                              else delete next.fallback;
+                              return next;
+                            },
+                            `${c.name}: fallback`,
+                          )
+                        }
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <b className="font-semibold text-zinc-300">Safety net, not a plan</b>
+                        <span className="block text-zinc-500">
+                          Tick this for combos that are what you fall back TO, not something you
+                          set out to build. They stop counting as &quot;starts a plan&quot; when
+                          ranking missions — without it, a salvage pile outranks every real combo
+                          starter.
+                        </span>
+                      </span>
+                    </label>
+
                     <CoreMissions
                       core={c.core}
                       onChange={(core) => patch(c.id, (x) => ({ ...x, core }), `${c.name}: core`)}

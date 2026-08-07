@@ -11,181 +11,10 @@ import { useEffect, useState } from 'react';
 import { useTracker } from '../store';
 import TreeView from './TreeView';
 import CombosTab from './CombosTab';
+import PhasesTab from './PhasesTab';
+import PriorityEditor, { condText, parseEntry } from './PriorityEditor';
 import { DEFAULT_COMBOS, type Combo } from '../../engine/combos';
 import { BEACON_LIST, CHIP } from './beaconStyles';
-
-const BOOST_PREFIXES = new Set(['buffed', 'aqua', 'boosted', 'vibrant']);
-/** Split "buffed:white" -> {color:'white', boosted:true, prefix:'buffed'}. */
-function parseEntry(entry: string): { color: string; boosted: boolean; prefix?: string } {
-  const i = entry.indexOf(':');
-  if (i < 0) return { color: entry, boosted: false };
-  const prefix = entry.slice(0, i).toLowerCase();
-  return { color: entry.slice(i + 1), boosted: BOOST_PREFIXES.has(prefix), prefix };
-}
-
-function condText(c: unknown): string {
-  if (!c || typeof c !== 'object') return '';
-  const o = c as Record<string, number | undefined> & { path?: string };
-  const p = o.path ?? '?';
-  const parts: string[] = [];
-  if (o.lt !== undefined) parts.push(`${p} < ${o.lt}`);
-  if (o.lte !== undefined) parts.push(`${p} ≤ ${o.lte}`);
-  if (o.gt !== undefined) parts.push(`${p} > ${o.gt}`);
-  if (o.gte !== undefined) parts.push(`${p} ≥ ${o.gte}`);
-  if (o.eq !== undefined) parts.push(`${p} = ${o.eq}`);
-  return parts.join(', ');
-}
-
-/**
- * Drag-to-reorder beacon priority for one phase.
- *
- * HTML5 drag events rather than a library — this is a short list on a
- * desktop-only editing screen, so the ~40 lines are cheaper than a dependency.
- *
- * Enforces the boost ordering rule: a `buffed:` entry must sit ABOVE the plain
- * entry of the same colour. A boosted white always outranks a raw one, so the
- * reverse order can never fire — we refuse the drop and say why instead of
- * silently accepting a list with a dead rule in it.
- */
-function PriorityEditor({
-  entries,
-  onChange,
-  onError,
-}: {
-  entries: string[];
-  onChange: (next: string[]) => void;
-  onError: (msg: string) => void;
-}) {
-  const [dragFrom, setDragFrom] = useState<number | null>(null);
-  const [dragOver, setDragOver] = useState<number | null>(null);
-  const [adding, setAdding] = useState(false);
-
-  /** Would this ordering put a plain entry above its own buffed twin? */
-  const brokenPair = (list: string[]): string | null => {
-    for (let i = 0; i < list.length; i++) {
-      const a = parseEntry(list[i]!);
-      if (a.boosted) continue;
-      for (let j = i + 1; j < list.length; j++) {
-        const b = parseEntry(list[j]!);
-        if (b.boosted && b.color === a.color) return a.color;
-      }
-    }
-    return null;
-  };
-
-  const commit = (next: string[]) => {
-    const bad = brokenPair(next);
-    if (bad) {
-      onError(
-        `A boosted ${bad} must rank above a plain ${bad} — a boosted beacon always outranks a raw one, so that order could never apply.`,
-      );
-      return;
-    }
-    onChange(next);
-  };
-
-  const move = (from: number, to: number) => {
-    if (from === to) return;
-    const next = [...entries];
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved!);
-    commit(next);
-  };
-
-  const used = new Set(entries);
-  const addable = BEACON_LIST.filter(
-    (c) => !used.has(c) || !used.has(`buffed:${c}`),
-  );
-
-  return (
-    <div className="mt-1.5">
-      <div className="flex flex-wrap items-center gap-1">
-        {entries.map((entry, i) => {
-          const { color, boosted } = parseEntry(entry);
-          return (
-            <span
-              key={entry}
-              draggable
-              onDragStart={() => setDragFrom(i)}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOver(i);
-              }}
-              onDragEnd={() => {
-                setDragFrom(null);
-                setDragOver(null);
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                if (dragFrom !== null) move(dragFrom, i);
-                setDragFrom(null);
-                setDragOver(null);
-              }}
-              className={`group inline-flex cursor-grab items-center gap-1 rounded px-1.5 py-0.5 text-[11px] active:cursor-grabbing ${
-                CHIP[color] ?? 'bg-zinc-700'
-              } ${boosted ? 'ring-1 ring-cyan-300' : ''} ${
-                dragOver === i && dragFrom !== i ? 'outline outline-2 outline-white' : ''
-              } ${dragFrom === i ? 'opacity-40' : ''}`}
-              title="drag to reorder · click to toggle boosted · ✕ to remove"
-            >
-              <span className="opacity-50">⠿</span>
-              <button
-                onClick={() => {
-                  const next = [...entries];
-                  next[i] = boosted ? color : `buffed:${color}`;
-                  commit(next);
-                }}
-                className="font-medium"
-              >
-                {i + 1}. {boosted ? '✦' : ''}{color}
-              </button>
-              <button
-                onClick={() => commit(entries.filter((_, k) => k !== i))}
-                className="opacity-40 hover:opacity-100"
-                title="remove"
-              >
-                ✕
-              </button>
-            </span>
-          );
-        })}
-
-        {adding ? (
-          <select
-            autoFocus
-            className="rounded bg-zinc-800 px-1 py-0.5 text-[11px]"
-            defaultValue=""
-            onBlur={() => setAdding(false)}
-            onChange={(e) => {
-              if (e.target.value) commit([...entries, e.target.value]);
-              setAdding(false);
-            }}
-          >
-            <option value="">add…</option>
-            {addable.flatMap((c) => [
-              !used.has(c) ? <option key={c} value={c}>{c}</option> : null,
-              !used.has(`buffed:${c}`) ? (
-                <option key={`b-${c}`} value={`buffed:${c}`}>✦ buffed:{c}</option>
-              ) : null,
-            ])}
-          </select>
-        ) : (
-          <button
-            onClick={() => setAdding(true)}
-            className="rounded border border-dashed border-zinc-600 px-1.5 py-0.5 text-[11px] text-zinc-400 hover:border-zinc-400 hover:text-zinc-200"
-          >
-            + beacon
-          </button>
-        )}
-      </div>
-      {entries.length === 0 && (
-        <p className="mt-1 text-[11px] text-zinc-600">
-          no priority — every beacon scores the neutral fallback here
-        </p>
-      )}
-    </div>
-  );
-}
 
 /** Numeric knob that writes straight back into the strategy. */
 function NumberKnob({
@@ -216,7 +45,7 @@ export default function Editor() {
   const [json, setJson] = useState('');
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [allOpen, setAllOpen] = useState(false);
-  const [panel, setPanel] = useState<'flow' | 'combos' | 'tree'>('combos');
+  const [panel, setPanel] = useState<'flow' | 'phases' | 'combos' | 'tree'>('combos');
 
   useEffect(() => setHydrated(true), []);
   useEffect(() => {
@@ -331,7 +160,7 @@ export default function Editor() {
               Tree is priority over MISSIONS HELD. */}
           <div className="flex items-center justify-between">
             <div className="flex gap-1">
-              {(['combos', 'flow', 'tree'] as const).map((p) => (
+              {(['combos', 'phases', 'flow', 'tree'] as const).map((p) => (
                 <button
                   key={p}
                   onClick={() => setPanel(p)}
@@ -352,6 +181,18 @@ export default function Editor() {
           </div>
 
           {panel === 'tree' && <TreeView />}
+
+          {panel === 'phases' && (
+            <PhasesTab
+              phases={(strategy.phases ?? []) as unknown as Record<string, unknown> & { id: string }[]}
+              onError={(text) => setMsg({ kind: 'err', text })}
+              onChange={(next, note) =>
+                mutate((d) => {
+                  d.phases = next;
+                }, note)
+              }
+            />
+          )}
 
           {panel === 'combos' && (
             <CombosTab
