@@ -532,6 +532,11 @@
           "sacrificial_ritual"
         ],
         [
+          "equilibrium",
+          "inner_peace",
+          "complete_chaos"
+        ],
+        [
           "high_roller",
           "redemption"
         ]
@@ -575,7 +580,8 @@
         "trialPreferenceShortRun": [
           "lights_out",
           "gambling_beast"
-        ]
+        ],
+        "poolSource": "dreaming (Discord, 2026-07-25). combo 3 = Porph / radiant hunter / sac ritual / equilibrium / inner peace; combo 4 is the same pool with complete_chaos instead. That is the pickOneOf tier below — the three are interchangeable and the choice is the user's, so they share a followup tier rather than forming separate combos."
       }
     },
     {

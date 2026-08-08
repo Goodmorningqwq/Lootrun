@@ -667,7 +667,16 @@ function bestSpeculativeFit(
 
   for (const rung of SPECULATIVE) {
     const combos = plans.filter((a) => roleIn(a) === rung.key);
-    if (combos.length > 0) return { bonus: rung.bonus, label: rung.label, combos };
+    if (combos.length === 0) continue;
+
+    // Break ties by FLEXIBILITY. Six missions were scoring an identical +25
+    // for "follow-up of something", which made any offer drawn from them a
+    // coin flip — the largest single source of blind offers. Before you have
+    // committed, a mission that fits more of your possible futures is worth
+    // more, because it keeps them open. Capped so breadth never outweighs
+    // being an actual core piece.
+    const spread = Math.min(combos.length - 1, 2) * 5;
+    return { bonus: rung.bonus + spread, label: rung.label, combos };
   }
   return null;
 }
