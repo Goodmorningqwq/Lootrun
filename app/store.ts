@@ -305,8 +305,9 @@ export const useTracker = create<TrackerStore>()(
       // discarded — losing the run is exactly what persistence exists to stop.
       // v2: `rank`. v3: `dailyBonus`/`silverbull`. v4: missions became slots.
       // v5: drop any persisted strategy — see below. v6: combos moved into
-      // the strategy and beacon bias became ordered wants/avoids.
-      version: 6,
+      // the strategy and beacon bias became ordered wants/avoids. v7: the fake
+      // "No Commitment" combo was deleted — see below.
+      version: 7,
       migrate: (persisted, version) => {
         const p = persisted as {
           history?: Array<RunState & { missions: Array<string | MissionSlot> }>;
@@ -323,6 +324,20 @@ export const useTracker = create<TrackerStore>()(
           // the user actually edited.
           delete p.strategy;
           delete p.strategyCustomized;
+        }
+        if (version < 7 && p.strategy) {
+          // "No Commitment" was never a real combo — the engine matched it by
+          // the literal id `universal` and skipped it everywhere else. Now that
+          // the skip is gone, a copy left in someone's saved strategy would be
+          // treated as a genuine plan: holding Complete Chaos would commit the
+          // run to it, and High Roller scored 200 instead of 135.
+          //
+          // Strip just that entry rather than discarding the whole strategy —
+          // anyone with a saved one has made real edits worth keeping.
+          const s = p.strategy as { combos?: { id: string }[] };
+          if (Array.isArray(s.combos)) {
+            s.combos = s.combos.filter((c) => c?.id !== 'universal');
+          }
         }
         if (version < 6) {
           // A strategy customised before combos existed has no `combos` key.
