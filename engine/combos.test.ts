@@ -16,7 +16,8 @@ import {
   resolvedBias,
   type Combo,
 } from './combos';
-import { DEFAULT_STRATEGY, MISSIONS, activeCombos, setStrategy, validateStrategy } from './evaluator';
+import { DEFAULT_STRATEGY, MISSIONS, activeCombos, evaluateMissionOffer, setStrategy, validateStrategy } from './evaluator';
+import { createRun } from './engine';
 import type { BeaconColor } from './types';
 
 interface Legacy {
@@ -152,6 +153,60 @@ describe('validation catches what a non-programmer will actually type', () => {
       withCombos([{ id: 'x', name: 'My purple rush', core: ['nope'], wants: [], avoids: [] }]),
     );
     if (!r.ok) expect(r.error).toContain('My purple rush');
+  });
+});
+
+describe('the stateless bonus does not depend on a magic combo id', () => {
+  const score = (id: string) =>
+    evaluateMissionOffer(
+      createRun({ challengesCompleted: 12, challengesRemaining: 25 }),
+      [id],
+    ).ranked[0]!.score;
+
+  const reasons = (id: string) =>
+    evaluateMissionOffer(
+      createRun({ challengesCompleted: 12, challengesRemaining: 25 }),
+      [id],
+    ).ranked[0]!.reasons.join(' ');
+
+  it('survives renaming every combo in the playbook', () => {
+    // The exact regression. The engine used to find these missions by the
+    // literal combo id "universal", so renaming that combo — something a fork
+    // would do without a second thought — silently cost High Roller 45 points.
+    // Renaming changes no structure, so the score must not move at all.
+    const base = score('high_roller');
+    setStrategy({
+      ...DEFAULT_STRATEGY,
+      combos: DEFAULT_COMBOS.map((c) => ({ ...c, id: `${c.id}_renamed` })),
+    });
+    expect(score('high_roller')).toBe(base);
+  });
+
+  it('survives deleting every combo in the playbook', () => {
+    // Deleting them all DOES cost High Roller its follow-up bonus — it is no
+    // longer a follow-up of anything, which is correct. The stateless bonus is
+    // the part that must not depend on any combo existing, so assert that
+    // specifically rather than the total.
+    setStrategy({ ...DEFAULT_STRATEGY, combos: [] });
+    expect(reasons('high_roller')).toMatch(/stateless/i);
+    expect(score('high_roller')).toBeGreaterThan(score('gourmand'));
+  });
+
+  it('lets a strategy replace the set outright', () => {
+    setStrategy({ ...DEFAULT_STRATEGY, neverDead: ['ostinato'] });
+    expect(score('ostinato')).toBeGreaterThan(score('high_roller'));
+  });
+
+  it('refuses an empty set rather than silently removing the safety net', () => {
+    const r = validateStrategy({ ...DEFAULT_STRATEGY, neverDead: [] });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/no safe pick|empty/i);
+  });
+
+  it('rejects a mission that does not exist', () => {
+    const r = validateStrategy({ ...DEFAULT_STRATEGY, neverDead: ['high_rollerr'] });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/not a known mission/);
   });
 });
 

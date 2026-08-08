@@ -13,7 +13,7 @@ import TreeView from './TreeView';
 import CombosTab from './CombosTab';
 import PhasesTab from './PhasesTab';
 import MissionsTab from './MissionsTab';
-import type { Verdict } from '../../engine/evaluator';
+import { neverDeadMissions, type Verdict } from '../../engine/evaluator';
 import PriorityEditor, { condText, parseEntry } from './PriorityEditor';
 import { DEFAULT_COMBOS, type Combo } from '../../engine/combos';
 import { CHIP } from './beaconStyles';
@@ -188,6 +188,7 @@ export default function Editor() {
             <MissionsTab
               overrides={(strategy.missionVerdicts ?? {}) as Record<string, Verdict>}
               weights={(verdictScores ?? {}) as Record<string, number>}
+              neverDead={neverDeadMissions()}
               onOverrides={(next, note) =>
                 mutate((d) => {
                   d.missionVerdicts = next;
@@ -196,6 +197,11 @@ export default function Editor() {
               onWeights={(next, note) =>
                 mutate((d) => {
                   d.verdictScores = next;
+                }, note)
+              }
+              onNeverDead={(next, note) =>
+                mutate((d) => {
+                  d.neverDead = next;
                 }, note)
               }
             />

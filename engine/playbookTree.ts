@@ -48,7 +48,7 @@ import type { BeaconColor, RunState } from './types';
  * updated the `commits:` badge (which goes through committedArchetype) but not
  * `also in:` (which did not), so the tree cited a combo that no longer existed.
  */
-const lines = () => activeCombos().filter((l) => l.id !== 'universal');
+const lines = () => activeCombos();
 
 /**
  * Every mission that can actually be held. `MISSIONS` already drops entries

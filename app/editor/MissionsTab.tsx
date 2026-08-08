@@ -36,13 +36,17 @@ const VERDICT_STYLE: Record<string, string> = {
 export default function MissionsTab({
   overrides,
   weights,
+  neverDead,
   onOverrides,
   onWeights,
+  onNeverDead,
 }: {
   overrides: Record<string, Verdict>;
   weights: Record<string, number>;
+  neverDead: Set<string>;
   onOverrides: (next: Record<string, Verdict>, note: string) => void;
   onWeights: (next: Record<string, number>, note: string) => void;
+  onNeverDead: (next: string[], note: string) => void;
 }) {
   const [open, setOpen] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
@@ -149,6 +153,11 @@ export default function MissionsTab({
                     was {shipped}
                   </span>
                 )}
+                {neverDead.has(m.id) && (
+                  <span className="rounded bg-emerald-950 px-1.5 py-0.5 text-[10px] text-emerald-300">
+                    never dead
+                  </span>
+                )}
                 <span className="ml-auto text-[10px] text-zinc-600">
                   {mine.length ? `${mine.length} combo${mine.length > 1 ? 's' : ''}` : 'unclaimed'}
                 </span>
@@ -189,6 +198,34 @@ export default function MissionsTab({
                       {m.verdictWhy}
                     </p>
                   )}
+
+                  <label
+                    className="flex cursor-pointer items-start gap-2 rounded border border-zinc-800 bg-zinc-950 p-2"
+                    title="Stateless missions are the safe pick when no combo has formed."
+                  >
+                    <input
+                      type="checkbox"
+                      checked={neverDead.has(m.id)}
+                      onChange={(e) => {
+                        const next = new Set(neverDead);
+                        if (e.target.checked) next.add(m.id);
+                        else next.delete(m.id);
+                        onNeverDead(
+                          [...next],
+                          `${m.id}: ${e.target.checked ? 'now' : 'no longer'} stateless`,
+                        );
+                      }}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      <b className="font-semibold text-zinc-300">Never a wasted slot</b>
+                      <span className="block text-zinc-500">
+                        Pays the same whatever else the run is doing, so it is the safe pick when
+                        nothing has come together — worth more on your last slot than a
+                        half-finished plan.
+                      </span>
+                    </span>
+                  </label>
 
                   {(m.roles?.length ?? 0) > 0 && (
                     <p className="text-zinc-500">

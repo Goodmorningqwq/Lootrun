@@ -94,6 +94,8 @@ export interface Strategy {
   combos?: Combo[];
   /** Per-mission verdict overrides — a fork disagreeing with the shipped call. */
   missionVerdicts?: Record<string, Verdict>;
+  /** Replaces the shipped set of stateless "never dead" missions outright. */
+  neverDead?: string[];
   tactics?: Tactics;
   verdictScores?: VerdictScores;
   sideComboRule?: SideComboRule;
@@ -194,6 +196,22 @@ export function validateStrategy(obj: unknown): { ok: true; strategy: Strategy }
     }
   }
 
+  if (s.neverDead !== undefined) {
+    if (!Array.isArray(s.neverDead))
+      return { ok: false, error: '"neverDead" must be an array of mission ids' };
+    for (const id of s.neverDead) {
+      if (typeof id !== 'string' || !MISSIONS[id])
+        return { ok: false, error: `neverDead: "${String(id)}" is not a known mission` };
+    }
+    // An empty list is legal but almost never intended, and it removes the
+    // safety net the advisor falls back on when no combo forms.
+    if (s.neverDead.length === 0)
+      return {
+        ok: false,
+        error: '"neverDead" is empty — with no stateless missions the advisor has no safe pick when nothing comes together. Remove the field to use the shipped set.',
+      };
+  }
+
   return { ok: true, strategy: obj as Strategy };
 }
 
@@ -246,6 +264,31 @@ export function verdictOf(id: string): Verdict | undefined {
 }
 
 /**
+ * Missions that are never a wasted slot — they pay the same whatever else the
+ * run is doing, so they are the safe pick when nothing has come together.
+ *
+ * This used to be membership of a combo called "No Commitment", which the
+ * engine found by the literal id `'universal'`. That combo was not a combo:
+ * beacon bias skipped it, commitment skipped it, the tree skipped it, and
+ * tagging these three missions was its only effect. Worse, matching on the id
+ * meant RENAMING OR DELETING it in the editor silently stripped 45 points from
+ * every safe mission — High Roller fell 135 to 90 — with no warning, on a
+ * screen whose whole purpose is letting people restructure the playbook.
+ *
+ * Now it is a per-mission property, on the per-mission screen, and a strategy
+ * may replace the set outright.
+ */
+export function neverDeadMissions(): Set<string> {
+  const override = strategy.neverDead;
+  if (override) return new Set(override);
+  return new Set(
+    Object.values(MISSIONS)
+      .filter((m) => m.neverDead)
+      .map((m) => m.id),
+  );
+}
+
+/**
  * NOTE ON `deleted`. The candidate list in playbookTree filters on the SHIPPED
  * verdict, not this override, and that is deliberate. Shipped `deleted` means
  * the mission is not in the game (Chronokinesis), which no strategy may
@@ -270,6 +313,9 @@ interface MissionSpec {
   beaconBiasWhy?: string;
   verdict?: Verdict;
   verdictWhy?: string;
+  /** Stateless — never a wasted slot. See neverDeadMissions(). */
+  neverDead?: boolean;
+  neverDeadWhy?: string;
 }
 
 interface TrialSpec {
@@ -332,7 +378,7 @@ export function composeBeaconBias(
     state.missions.filter((m) => !activatedOnly || m.fulfilled).map((m) => m.id),
   );
   const matches = activeCombos().filter(
-    (a) => a.id !== 'universal' && (a.core ?? []).some((c) => held.has(c)),
+    (a) => (a.core ?? []).some((c) => held.has(c)),
   ).map((a) => {
     const core = a.core ?? [];
     const hits = core.filter((c) => held.has(c)).length;
@@ -370,7 +416,6 @@ export function committedArchetype(state: RunState, activatedOnly = false): Arch
   );
   let best: { a: Archetype; hits: number } | null = null;
   for (const a of activeCombos()) {
-    if (a.id === 'universal') continue;
     const hits = a.core.filter((c) => held.has(c)).length;
     if (hits > 0 && (!best || hits > best.hits)) best = { a, hits };
   }
@@ -752,9 +797,8 @@ export function evaluateMissionOffer(state: RunState, offered: string[]): Missio
       }
     }
 
-    // --- universal value ----------------------------------------------
-    const universal = activeCombos().find((a) => a.id === 'universal');
-    if (universal?.core.includes(id)) {
+    // --- stateless value ------------------------------------------------
+    if (neverDeadMissions().has(id)) {
       const bonus = slotsLeft <= 1 ? 75 : 45;
       score += bonus;
       reasons.push(

@@ -639,19 +639,6 @@
       }
     },
     {
-      "id": "universal",
-      "name": "No Commitment",
-      "fallback": true,
-      "core": [
-        "high_roller",
-        "redemption",
-        "complete_chaos"
-      ],
-      "wants": [],
-      "avoids": [],
-      "notes": "The correct fallback when no archetype has formed. These are stateless and never dead. Prefer them over a speculative archetype core when only 1 grey beacon remains."
-    },
-    {
       "id": "opal",
       "name": "Combo 2 — Opal",
       "core": [

@@ -167,17 +167,6 @@
       "trialPreferenceWhy": "Converts a dead run into end-reward rerolls. Or just ditch the run."
     },
     {
-      "id": "universal",
-      "name": "No Commitment",
-      "fallback": true,
-      "core": [
-        "high_roller",
-        "redemption",
-        "complete_chaos"
-      ],
-      "notes": "The correct fallback when no archetype has formed. These are stateless and never dead. Prefer them over a speculative archetype core when only 1 grey beacon remains."
-    },
-    {
       "id": "opal",
       "name": "Combo 2 — Opal",
       "popularity": 1,
@@ -258,5 +247,6 @@
     }
   ],
   "communityNote": "These combos will migrate into strategies/*.json so the community can add and edit their own. Kept here only until the playbook migration.",
-  "restructured": "dreaming (Discord, 2026-07-25) lists five combos and no combo 6. Ostinato folded into combo 1, where the expert puts it and where this combo was already named for it. Combo 6 (mix-match) deleted: it was absent from the expert list AND the impact rail had independently found it changed no beacon priority, because it only restated combo 3 and Ostinato."
+  "restructured": "dreaming (Discord, 2026-07-25) lists five combos and no combo 6. Ostinato folded into combo 1, where the expert puts it and where this combo was already named for it. Combo 6 (mix-match) deleted: it was absent from the expert list AND the impact rail had independently found it changed no beacon priority, because it only restated combo 3 and Ostinato.",
+  "neverDeadNote": "\"No Commitment\" used to live here as a combo. It was not one: the engine skipped it in beacon bias, in combo commitment and in the tree, so its only effect was tagging three missions as stateless. That is a per-mission property and now lives on the missions themselves as neverDead."
 }

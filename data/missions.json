@@ -536,7 +536,9 @@
         "universal"
       ],
       "notes": "Stateless, unconditional value. The correct default when no archetype has formed.",
-      "verdict": "salvage"
+      "verdict": "salvage",
+      "neverDead": true,
+      "neverDeadWhy": "Stateless: it pays the same whatever else the run is doing, so it is never a wasted slot. Was expressed as membership of a fake \"No Commitment\" combo, which the engine matched by the literal id \"universal\" — renaming or deleting that combo silently stripped this bonus from every safe mission."
     },
     {
       "id": "redemption",
@@ -550,7 +552,9 @@
         "universal"
       ],
       "notes": "Stateless. Each sac saves 50% of unsaved pulls (2 sacs = 75%, 3 = 87.5%) — diminishing, so cap the stack.",
-      "verdict": "salvage"
+      "verdict": "salvage",
+      "neverDead": true,
+      "neverDeadWhy": "Stateless: it pays the same whatever else the run is doing, so it is never a wasted slot. Was expressed as membership of a fake \"No Commitment\" combo, which the engine matched by the literal id \"universal\" — renaming or deleting that combo silently stripped this bonus from every safe mission."
     },
     {
       "id": "sacrificial_ritual",
@@ -596,7 +600,9 @@
         "rarityWeighted": "Common beacons (yellow/blue/purple) are far likelier than rare ones (orange/rainbow)."
       },
       "strength": "weak",
-      "verdict": "pool"
+      "verdict": "pool",
+      "neverDead": true,
+      "neverDeadWhy": "Stateless: it pays the same whatever else the run is doing, so it is never a wasted slot. Was expressed as membership of a fake \"No Commitment\" combo, which the engine matched by the literal id \"universal\" — renaming or deleting that combo silently stripped this bonus from every safe mission."
     },
     {
       "id": "unknown_2_2_1_missions",
