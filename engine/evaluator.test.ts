@@ -14,6 +14,7 @@ import {
   isRunnable,
   testCondition,
   validateStrategy,
+  getStrategy,
   setStrategy,
   DEFAULT_STRATEGY,
   composeBeaconBias,
@@ -290,9 +291,26 @@ describe('archetype-aware beacon priority (playtester feedback)', () => {
       [{ color: 'yellow' }, { color: 'blue' }],
     );
     expect(a.ranked[0]?.color).toBe('yellow');
-    const blue = a.ranked.find((r) => r.color === 'blue')!;
-    // flying_chest downranks blue (Hoarder makes blue redundant).
-    expect(blue.reasons.join(' ')).toMatch(/avoids blue/i);
+  });
+
+  it('flips blue up once Ostinato joins the same chest pool', () => {
+    // Combo 1's pool now includes Ostinato (dreaming, 2026-07-25), and the
+    // combo no longer takes a blanket stance on blue. It used to carry
+    // blue -10 for "Hoarder makes blue redundant", which is true with the
+    // chest engine alone and WRONG with Ostinato, where every duplicate boon
+    // is +1 pull. A combo bias scales by how much of a pool you hold, not by
+    // which parts, so it cannot express that — the Ostinato mission's own
+    // blue bias does, and only when Ostinato is actually held.
+    const chestOnly = evaluateOffer(runAt(15, { missions: slots('interest_scheme', 'hoarder') }), [
+      { color: 'blue' },
+    ]).ranked[0]!;
+    const withOstinato = evaluateOffer(
+      runAt(15, { missions: slots('interest_scheme', 'hoarder', 'ostinato') }),
+      [{ color: 'blue' }],
+    ).ranked[0]!;
+
+    expect(withOstinato.score).toBeGreaterThan(chestOnly.score);
+    expect(withOstinato.reasons.join(' ')).toMatch(/ostinato/i);
   });
 
   it('does NOT urge a RAW grey early — waiting for a boosted one is better', () => {
@@ -393,35 +411,46 @@ describe('combo bias composes across straddled combos', () => {
    * several combos silently lost every bias but one.
    */
   it('applies the strongest advocate across all matching combos', () => {
-    // Ostinato + Porph matches three combos at once, all fully complete:
-    //   curse_stack (wants purple) · ostinato (wants blue) · mix_match (both)
+    // Ostinato + Porph straddles two combos: Ostinato is one of combo 1's four
+    // pool missions (1/4 built), Porphyrophobia is all of combo 3 (1/1).
     const s = runAt(15, { missions: slots('ostinato', 'porphyrophobia') });
     const bias = composeBeaconBias(s, true);
     const top = ladderValue('wants', 0);
 
-    // Strongest advocate wins per colour — NOT the sum, which would
-    // double-count mix_match restating what the other two already say.
-    expect(bias.purple?.value).toBe(top);
-    expect(bias.blue?.value).toBe(top);
-    expect(bias.purple!.value).toBeLessThan(top * 2);
+    // Each combo still speaks for its own colour — the straddling run does not
+    // silently lose one of them, which is the bug this guards.
+    expect(bias.purple?.value).toBe(top); // combo 3, fully built
+    expect(bias.yellow?.value).toBeCloseTo(top * 0.25); // combo 1, 1 of 4
     expect(bias.purple?.from).toMatch(/Purple/);
   });
 
   it('scales bias by how complete the combo is', () => {
-    const third = composeBeaconBias(runAt(15, { missions: slots('hoarder') }), true);
-    const twoThirds = composeBeaconBias(
+    const one = composeBeaconBias(runAt(15, { missions: slots('hoarder') }), true);
+    const two = composeBeaconBias(
       runAt(15, { missions: slots('hoarder', 'interest_scheme') }),
       true,
     );
-    // flying_chest yellow +30 at 1/3 then 2/3 built.
-    expect(third.yellow!.value).toBeCloseTo(10);
-    expect(twoThirds.yellow!.value).toBeCloseTo(20);
-    expect(third.yellow!.completeness).toBeCloseTo(1 / 3);
+    // Combo 1's pool is four missions, so each one held is a quarter of it.
+    expect(one.yellow!.completeness).toBeCloseTo(0.25);
+    expect(two.yellow!.value).toBeCloseTo(one.yellow!.value * 2);
   });
 
   it('keeps advocate and objector when combos disagree', () => {
-    // flying_chest AVOIDS blue; the ostinato combo WANTS it, fully complete.
+    // No two SHIPPED combos disagree about a colour any more, so this builds
+    // the disagreement explicitly — the composition rule still has to work, and
+    // a community playbook can easily create one.
+    const before = getStrategy();
+    setStrategy({
+      ...before,
+      combos: [
+        { id: 'a', name: 'Wants blue', core: ['ostinato'], wants: ['blue'], avoids: [] },
+        { id: 'b', name: 'Hates blue', core: ['hoarder'], wants: [], avoids: ['blue'] },
+      ],
+    });
+
     const bias = composeBeaconBias(runAt(15, { missions: slots('hoarder', 'ostinato') }), true);
+    setStrategy(before);
+
     // The objector drags the advocate down without cancelling it — asserted as
     // a direction, so tuning the ladder rungs cannot silently break this.
     expect(bias.blue!.value).toBeLessThan(ladderValue('wants', 0));
@@ -638,7 +667,11 @@ describe('mission activation and objectives (playtest feedback)', () => {
       [{ color: 'blue' }, { color: 'yellow' }],
     );
     expect(a.ranked[0]?.color).toBe('blue');
-    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/run combo wants blue/i);
+    // The blue signal is the Ostinato MISSION's own bias, not a combo's. Combo
+    // 1 stopped taking a blanket stance on blue when Ostinato joined its pool,
+    // because whether blue is good depends on holding Ostinato specifically —
+    // which is exactly what a per-mission bias expresses and a combo cannot.
+    expect(a.ranked[0]?.reasons.join(' ')).toMatch(/ostinato/i);
   });
 
   it('never recommends darkGrey to complete an objective', () => {

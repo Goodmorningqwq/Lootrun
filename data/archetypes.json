@@ -7,9 +7,10 @@
       "id": "flying_chest",
       "name": "Combo 1 — Chest / Ostinato",
       "core": [
-        "jesters_trick",
         "interest_scheme",
-        "hoarder"
+        "hoarder",
+        "ostinato",
+        "jesters_trick"
       ],
       "enablers": [
         "materialism"
@@ -17,6 +18,9 @@
       "followups": [
         [
           "materialism"
+        ],
+        [
+          "route_indigo"
         ],
         [
           "orphions_grace"
@@ -30,17 +34,17 @@
         "serendipity",
         "looter",
         "parsimonious",
-        "midas_touch"
+        "midas_touch",
+        "heavensent"
       ],
       "trialPreference": [
         "hubris",
         "treasury_bill"
       ],
       "beaconBias": {
-        "yellow": 30,
-        "blue": -10
+        "yellow": 30
       },
-      "notes": "Self-sustaining pull->chest->boon loop. Hoarder makes Blue Beacons largely redundant, so blue is downranked once online.",
+      "notes": "Self-sustaining pull->chest->boon loop. Pool per dreaming (Discord, 2026-07-25): Interest Scheme / Hoarder / Ostinato / Jester's Trick. Ostinato was previously a separate combo, which collided with this one over its own core mission. Playtest (Mujtaba, 2026-07-23): on an Ostinato run blues were the strongest beacon, because every duplicate boon is +1 pull — that signal now comes from the Ostinato mission's own blue bias, so it applies only when Ostinato is actually held.",
       "cores": [
         [
           "interest_scheme",
@@ -51,7 +55,24 @@
           "hoarder"
         ]
       ],
-      "coresNote": "TWO independent cores. Interest Scheme + Jester's is good alone; Ostinato + Hoarder is a separate pull generator. With 3 slots you take one pair plus a piece of the other."
+      "coresNote": "TWO independent cores. Interest Scheme + Jester's is good alone; Ostinato + Hoarder is a separate pull generator. With 3 slots you take one pair plus a piece of the other.",
+      "boonSelectionRule": "INVERTS normal boon advice: deliberately take DUPLICATE boon types (+1 pull each). Blue and yellow (boon/chest sources) are therefore up, not down.",
+      "routes": [
+        {
+          "id": "yellow",
+          "needs": [
+            "hoarder"
+          ],
+          "note": "boons via flying chests"
+        },
+        {
+          "id": "blue",
+          "needs": [
+            "orphions_grace"
+          ],
+          "note": "boons via blue beacons — the pivot when the chest route dies"
+        }
+      ]
     },
     {
       "id": "curse_stack",
@@ -113,7 +134,11 @@
         "lights_out",
         "gambling_beast"
       ],
-      "poolSource": "dreaming (Discord, 2026-07-25). combo 3 = Porph / radiant hunter / sac ritual / equilibrium / inner peace; combo 4 is the same pool with complete_chaos instead. That is the pickOneOf tier below — the three are interchangeable and the choice is the user's, so they share a followup tier rather than forming separate combos."
+      "poolSource": "dreaming (Discord, 2026-07-25). combo 3 = Porph / radiant hunter / sac ritual / equilibrium / inner peace; combo 4 is the same pool with complete_chaos instead. That is the pickOneOf tier below — the three are interchangeable and the choice is the user's, so they share a followup tier rather than forming separate combos.",
+      "enablers": [
+        "route_indigo"
+      ],
+      "enablersNote": "Route Indigo empowers Purple and Blue Beacons. It belongs to no combo in the expert list, but it amplifies this one's entire payoff, and leaving it unclaimed would make it score zero everywhere."
     },
     {
       "id": "sac_stack",
@@ -140,48 +165,6 @@
       "notes": "All In converts each sac into +3 rerolls at run end. Sacs have diminishing returns (50%/75%/87.5%) so cap the stack at 3 and pivot to rerolls.",
       "coreNote": "Expert: for a failing run, add missions that give reroll and sac RAW (unconditional). High Roller and Redemption are the only two.",
       "trialPreferenceWhy": "Converts a dead run into end-reward rerolls. Or just ditch the run."
-    },
-    {
-      "id": "ostinato",
-      "name": "Ostinato (pull generator — combo 1b / combo 6)",
-      "core": [
-        "ostinato"
-      ],
-      "followups": [
-        [
-          "orphions_grace"
-        ],
-        [
-          "high_roller",
-          "redemption"
-        ]
-      ],
-      "boonPreference": [
-        "serendipity",
-        "heavensent"
-      ],
-      "beaconBias": {
-        "blue": 35,
-        "yellow": 15
-      },
-      "boonSelectionRule": "INVERTS normal boon advice: deliberately take DUPLICATE boon types (+1 pull each). Blue and yellow (boon/chest sources) are therefore up, not down.",
-      "notes": "Confirmed by playtest (Mujtaba, 2026-07-23): blues were the strongest beacon on an Ostinato run, because every boon taken is +1 pull per duplicate. Hard anti-synergy with Opal Offering (which wants high potency, not duplicates).",
-      "routes": [
-        {
-          "id": "yellow",
-          "needs": [
-            "hoarder"
-          ],
-          "note": "boons via flying chests"
-        },
-        {
-          "id": "blue",
-          "needs": [
-            "orphions_grace"
-          ],
-          "note": "boons via blue beacons — the pivot when the chest route dies"
-        }
-      ]
     },
     {
       "id": "universal",
@@ -232,32 +215,6 @@
       "notes": "Removes almost all bloat and gives a good amount of pulls."
     },
     {
-      "id": "mix_match",
-      "name": "Combo 6 — Mix-match (Ostinato/Porph/Route Indigo)",
-      "popularity": 3,
-      "core": [
-        "ostinato",
-        "porphyrophobia"
-      ],
-      "followups": [
-        [
-          "equilibrium"
-        ],
-        [
-          "route_indigo"
-        ],
-        [
-          "high_roller",
-          "redemption"
-        ]
-      ],
-      "beaconBias": {
-        "purple": 30,
-        "blue": 25
-      },
-      "notes": "Expert: \"a weird mix match combo of ostinatio porph equi route indigo\". Route Indigo boosts purple AND blue by 1 tier but obscures which is which."
-    },
-    {
       "id": "side_pull",
       "name": "Side combo — Thrill Seeker + Knife Edge",
       "popularity": 4,
@@ -300,5 +257,6 @@
       "why": "merged into side_pull with Thrill Seeker"
     }
   ],
-  "communityNote": "These combos will migrate into strategies/*.json so the community can add and edit their own. Kept here only until the playbook migration."
+  "communityNote": "These combos will migrate into strategies/*.json so the community can add and edit their own. Kept here only until the playbook migration.",
+  "restructured": "dreaming (Discord, 2026-07-25) lists five combos and no combo 6. Ostinato folded into combo 1, where the expert puts it and where this combo was already named for it. Combo 6 (mix-match) deleted: it was absent from the expert list AND the impact rail had independently found it changed no beacon priority, because it only restated combo 3 and Ostinato."
 }

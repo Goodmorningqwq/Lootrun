@@ -6,7 +6,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 import { createRun, legalColors } from './engine';
-import { DEFAULT_STRATEGY, MISSIONS, evaluateOffer, setStrategy } from './evaluator';
+import { DEFAULT_STRATEGY, MISSIONS, activeCombos, evaluateOffer, setStrategy } from './evaluator';
 import { CANDIDATES, childOf, rootBaseline, treeNode, type TreeNode } from './playbookTree';
 
 /** Rebuild a node's state the same way playbookTree does. */
@@ -181,9 +181,23 @@ describe('the tree is worth drawing', () => {
 
   it('a single core mission is enough to commit to its archetype', () => {
     const ost = treeNode(['ostinato']);
-    expect(ost.commits).not.toBeNull();
-    // Ostinato sits in more than one combo's core, which the badge must show.
-    expect(ost.alsoIn.length).toBeGreaterThan(0);
+    expect(ost.commits?.id).toBe('flying_chest');
+  });
+
+  it('no mission is claimed by two combos, so nothing loses a silent tie', () => {
+    // committedArchetype breaks ties by array order, so a mission in two cores
+    // means one combo always loses without saying so. Folding Ostinato into
+    // combo 1 and deleting combo 6 removed the last overlaps — this keeps it
+    // that way, and `alsoIn` being empty everywhere is the visible consequence.
+    const owner = new Map<string, string>();
+    for (const c of activeCombos()) {
+      if (c.fallback) continue;
+      for (const m of c.core) {
+        expect(owner.has(m), `${m} is in both ${owner.get(m)} and ${c.id}`).toBe(false);
+        owner.set(m, c.id);
+      }
+    }
+    for (const id of CANDIDATES) expect(treeNode([id]).alsoIn).toEqual([]);
   });
 
   it("acquiring a combo member raises that combo's payoff beacon", () => {

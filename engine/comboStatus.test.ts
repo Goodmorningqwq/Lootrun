@@ -23,14 +23,18 @@ describe('combo reachability', () => {
   });
 
   it('goes alive once a core mission is held', () => {
-    const s = statusOf(run(['ostinato']), 'mix_match');
+    // Ostinato is one of combo 1's four pool missions.
+    const s = statusOf(run(['ostinato']), 'flying_chest');
     expect(s.state).toBe('alive');
     expect(s.held).toEqual(['ostinato']);
-    expect(s.missing).toContain('porphyrophobia');
+    expect(s.missing).toContain('hoarder');
   });
 
   it('is complete when every core mission is held', () => {
-    const s = statusOf(run(['ostinato', 'porphyrophobia']), 'mix_match');
+    // Combo 3 is a single core mission, so one pick finishes it. Combo 1's
+    // four-mission pool can never be 'complete' this way — only three slots
+    // exist — which is why running out of slots counts as complete instead.
+    const s = statusOf(run(['porphyrophobia']), 'curse_stack');
     expect(s.state).toBe('complete');
     expect(s.missing).toEqual([]);
     expect(s.completeness).toBe(1);
@@ -48,15 +52,15 @@ describe('combo reachability', () => {
 
   it('is final rather than dead when slots run out mid-build', () => {
     // Partially built and out of slots is not a failure — it is just finished.
-    const s = statusOf(run(['ostinato', 'high_roller', 'redemption']), 'mix_match');
+    const s = statusOf(run(['ostinato', 'high_roller', 'redemption']), 'flying_chest');
     expect(s.state).toBe('complete');
-    expect(s.why).toMatch(/final at 1 of 2/);
+    expect(s.why).toMatch(/final at 1 of 4/);
   });
 
   it('reports completeness as the fraction that scales beacon bias', () => {
     // Must agree with composeBeaconBias, which scales by hits / core.length.
-    const s = statusOf(run(['ostinato']), 'mix_match');
-    expect(s.completeness).toBe(0.5);
+    const s = statusOf(run(['ostinato']), 'flying_chest');
+    expect(s.completeness).toBe(0.25);
   });
 
   it('never reports on fallback combos', () => {
@@ -69,9 +73,11 @@ describe('combo reachability', () => {
 
 describe('which plan the run is actually on', () => {
   it('picks the combo furthest along', () => {
+    // Both hold one core mission, so completeness breaks the tie: combo 3 is
+    // fully built off Porphyrophobia alone, combo 1 is a quarter built.
     const lead = leadingCombo(run(['ostinato', 'porphyrophobia']));
-    expect(lead?.combo.id).toBe('mix_match');
-    expect(lead?.held).toHaveLength(2);
+    expect(lead?.combo.id).toBe('curse_stack');
+    expect(lead?.completeness).toBe(1);
   });
 
   it('is null when nothing has been started', () => {

@@ -79,7 +79,12 @@ export function analyseCombo(combo: Combo): ComboImpact {
   const myIndex = all.findIndex((c) => c.id === combo.id);
   const collisions: Collision[] = [];
   for (const [i, other] of all.entries()) {
-    if (other.id === combo.id || other.id === 'universal') continue;
+    if (other.id === combo.id) continue;
+    // Two fallbacks overlapping is expected and harmless — neither claims to
+    // start a plan, so whichever wins the tie steers nothing. Salvage's core is
+    // a subset of No Commitment's by design; warning about it every time would
+    // train the reader to ignore the rail.
+    if (combo.fallback && other.fallback) continue;
     const shared = core.filter((m) => (other.core ?? []).includes(m));
     if (shared.length === 0) continue;
     // Equal hit counts: whichever appears first in the array takes it.
